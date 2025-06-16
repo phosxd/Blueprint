@@ -13,11 +13,11 @@ config_version=5
 config/name="Blueprint"
 config/use_hidden_project_data_directory=false
 config/features=PackedStringArray("4.4", "GL Compatibility")
-config/icon="uid://blhncsl5omvbo"
+config/icon="uid://co3rww6dwli8r"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/Blueprint/plugin.cfg", "res://addons/json-blueprint/plugin.cfg")
+enabled=PackedStringArray("res://addons/Blueprint/plugin.cfg")
 
 [rendering]
 

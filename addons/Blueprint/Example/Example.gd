@@ -1,6 +1,6 @@
 extends Node2D
 
-const blueprints_path:String = 'res://addons/json-blueprint/Example/Blueprints'
+const blueprints_path:String = 'res://addons/Blueprint/Example/Blueprints'
 
 
 func _ready() -> void:
@@ -8,8 +8,8 @@ func _ready() -> void:
 		if not filename.ends_with('.json'): continue
 		BlueprintManager.add_blueprint_from_file(filename.trim_suffix('.json'), blueprints_path+'/'+filename)
 	
-	var main_blueprint:Blueprint = BlueprintManager.get_blueprint('main')
-	var matched := main_blueprint.match({
-		'hello': 1,
+	var player_blueprint:Blueprint = BlueprintManager.get_blueprint('player')
+	var matched := player_blueprint.match({
+		"health": 50,
 	})
-	print(matched.object)
+	print(matched)

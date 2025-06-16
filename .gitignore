@@ -1,3 +1,8 @@
+project.godot
+.editorconfig
+.gitattributes
+.gitignore
+
 # Godot 4+ specific ignores
 .godot/
 

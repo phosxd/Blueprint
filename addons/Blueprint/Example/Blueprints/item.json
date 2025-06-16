@@ -1,0 +1,4 @@
+{
+	"id": {"type":"string", "default":"placeholder"},
+	"metadata": {"type":"dict", "default":{}},
+}
