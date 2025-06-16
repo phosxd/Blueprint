@@ -9,7 +9,8 @@ func _ready() -> void:
 		BlueprintManager.add_blueprint_from_file(filename.trim_suffix('.json'), blueprints_path+'/'+filename)
 	
 	var player_blueprint:Blueprint = BlueprintManager.get_blueprint('player')
-	var matched := player_blueprint.match({
+	if not player_blueprint: return
+	var matched = player_blueprint.match({
 		"health": 50,
 	})
 	print(matched)
