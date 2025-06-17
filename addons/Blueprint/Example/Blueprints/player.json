@@ -1,5 +1,19 @@
 {
-	"name": {"type":"string", "range":[4,20], "regex":"[A-Z,a-z,0-9]+", "default":"Placeholder"},
-	"health": {"type":"int", "range":[0,100], "default":100},
-	"inventory": {"type":"array", "range":null, "element_types":[">item"], "default":[]},
+	"name": {
+		"type":"string",
+		"range":[4,20],
+		"regex":"[A-Z,a-z,0-9]+",
+		"default":"Placeholder"
+	},
+	"health": {
+		"type":"int",
+		"range":[0,100],
+		"default":100
+	},
+	"inventory": {
+		"type":"array",
+		"range":null,
+		"element_types":[">item"],
+		"default":[]
+	},
 }

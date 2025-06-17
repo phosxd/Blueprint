@@ -10,6 +10,7 @@ func _ready() -> void:
 	
 	var player_blueprint:Blueprint = BlueprintManager.get_blueprint('player')
 	if not player_blueprint: return
+	if not player_blueprint.valid: return
 	var matched = player_blueprint.match({
 		"health": 50,
 		"inventory": [{'id':'cookie'}, {'id':'helmet'}]

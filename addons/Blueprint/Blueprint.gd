@@ -11,8 +11,17 @@ enum error {
 	ERR_BP_PARAMSET_INVALID_OPTIONAL_PARAM,
 	ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM,
 	ERR_BP_PARAMSET_INVALID_RANGE_PARAM,
-	ERR_BP_PARAMSET_INVALID_ENUM_PARAM
+	ERR_BP_PARAMSET_INVALID_ENUM_PARAM,
+	ERR_BP_PARAMSET_INVALID_PREFIX_PARAM,
+	ERR_BP_PARAMSET_INVALID_SUFFIX_PARAM,
+	ERR_BP_PARAMSET_INVALID_REGEX_PARAM,
+	ERR_BP_PARAMSET_INVALID_ELEMENT_TYPES_PARAM,
+	ERR_BP_PARAMSET_UNEXPECTED_PREFIX_PARAM,
+	ERR_BP_PARAMSET_UNEXPECTED_SUFFIX_PARAM,
+	ERR_BP_PARAMSET_UNEXPECTED_REGEX_PARAM,
+	ERR_BP_PARAMSET_UNEXPECTED_ELEMENT_TYPES_PARAM,
 }
+
 ## Blueprint errors as explanatory strings.
 const error_strings:Array[String] = [
 	'OK.',
@@ -24,8 +33,16 @@ const error_strings:Array[String] = [
 	'Blueprint parameter set\'s "default" parameter value type must match the `type` parameter & is required when `optional` parameter is false or undefined, or when `type` is not a blueprint.',
 	'Blueprint parameter set\'s "range" parameter must be of type `Array` & have 2 elements of type `int`.',
 	'Blueprint parameter set\'s "enum" parameter must be of type `Array` & have elements of value type that matches `type` parameter.',
+	'Blueprint parameter set\'s "prefix" parameter must be of type `String`.',
+	'Blueprint parameter set\'s "suffix" parameter must be of type `String`.',
+	'Blueprint parameter set\'s "regex" parameter must be of type `String`.',
+	'Blueprint parameter set\'s "element_types" parameter must be of type `Array`.',
+	'Blueprint parameter set\'s "prefix" parameter is only expected when the parameter set\'s "type" parameter is "string".',
+	'Blueprint parameter set\'s "suffix" parameter is only expected when the parameter set\'s "type" parameter is "string".',
+	'Blueprint parameter set\'s "regex" parameter is only expected when the parameter set\'s "type" parameter is "string".',
+	'Blueprint parameter set\'s "element_types" parameter is only expected when the parameter set\'s "type" parameter is "array".',
 ]
-## Blueprint data.
+## Blueprint data. If modified, `_validate` needs to be called immediately after.
 var data:Dictionary
 ## Whether or not this Blueprint is valid for use.
 var valid:bool
@@ -102,7 +119,33 @@ static func _validate(data:Dictionary) -> error:
 			for item in enum_param:
 				if typeof(item) != type_param_literal_type: return error.ERR_BP_PARAMSET_INVALID_ENUM_PARAM
 
+		# Validate "prefix" parameter.
+		var prefix_param = value.get('prefix')
+		if prefix_param != null:
+			if type_param_literal_type != TYPE_STRING: return error.ERR_BP_PARAMSET_UNEXPECTED_PREFIX_PARAM
+			if typeof(prefix_param) != TYPE_STRING: return error.ERR_BP_PARAMSET_INVALID_PREFIX_PARAM
+
+		# Validate "suffix" parameter.
+		var suffix_param = value.get('suffix')
+		if suffix_param != null:
+			if type_param_literal_type != TYPE_STRING: return error.ERR_BP_PARAMSET_UNEXPECTED_SUFFIX_PARAM
+			if typeof(suffix_param) != TYPE_STRING: return error.ERR_BP_PARAMSET_INVALID_SUFFIX_PARAM
+
+		# Validate "regex" parameter.
+		var regex_param = value.get('regex')
+		if regex_param != null:
+			if type_param_literal_type != TYPE_STRING: return error.ERR_BP_PARAMSET_UNEXPECTED_REGEX_PARAM
+			if typeof(regex_param) != TYPE_STRING: return error.ERR_BP_PARAMSET_INVALID_REGEX_PARAM
+
+		# Validate "element_types" parameter.
+		var element_types_param = value.get('element_types')
+		if element_types_param != null:
+			if type_param_literal_type != TYPE_ARRAY: return error.ERR_BP_PARAMSET_UNEXPECTED_ELEMENT_TYPES_PARAM
+			if typeof(element_types_param) != TYPE_ARRAY: return error.ERR_BP_PARAMSET_INVALID_ELEMENT_TYPES_PARAM
+
 	return error.OK
+
+
 
 
 ## Matches the `object` to this Blueprint, mismatched values will be fixed. Returns fixed `object`. Returns `null` if Blueprint is invalid.
@@ -142,20 +185,20 @@ func match(object:Dictionary):
 
 static func _handle_string_match(value, parameters:Dictionary):
 	if typeof(value) != TYPE_STRING: return parameters.default # Validate value type.
-	# Validate string length.
+	# Validate with string length.
 	var range = parameters.get('range')
 	var value_length:int = value.length()
 	if range:
 		if value_length > range[1] || value_length < range[0]: return parameters.default
-	# Validate prefix.
+	# Validate with prefix.
 	var prefix = parameters.get('prefix')
 	if prefix:
 		if not value.begins_with(prefix): return parameters.default
-	# Validate suffix.
+	# Validate with suffix.
 	var suffix = parameters.get('suffix')
 	if prefix:
 		if not value.ends_with(prefix): return parameters.default
-	# Validate regex match.
+	# Validate with regex match.
 	var regex_pattern = parameters.get('regex')
 	if regex_pattern:
 		var regex := RegEx.new()
@@ -173,7 +216,7 @@ static func _handle_string_match(value, parameters:Dictionary):
 static func _handle_int_match(value, parameters:Dictionary):
 	if typeof(value) != TYPE_INT: return parameters.default # Validate value type.
 	var range = parameters.get('range')
-	# Validate min/max.
+	# Validate with min/max.
 	if range:
 		if value > range[1] || value < range[0]: return parameters.default
 	return value
@@ -182,7 +225,7 @@ static func _handle_int_match(value, parameters:Dictionary):
 static func _handle_float_match(value, parameters:Dictionary):
 	if typeof(value) != TYPE_FLOAT: return parameters.default # Validate value type.
 	var range = parameters.get('range')
-	# Validate min/max.
+	# Validate with min/max.
 	if range:
 		if value > range[1] || value < range[0]: return parameters.default
 	return value
@@ -193,10 +236,10 @@ static func _handle_array_match(value, parameters:Dictionary):
 	var new_value:Array = []
 	var range = parameters.get('range')
 	var value_size:int = value.size()
-	# Validate array size.
+	# Validate with array size.
 	if range:
 		if value_size > range[1] || value_size < range[0]: return parameters.default
-	# Validate type of each element in array.
+	# Validate with type of each element in array.
 	var element_types = parameters.get('element_types')
 	if element_types:
 		var element_types_size:int = element_types.size()
@@ -233,7 +276,7 @@ static func _handle_dict_match(value, parameters:Dictionary):
 	if typeof(value) != TYPE_DICTIONARY: return parameters.default # Validate value type.
 	var range = parameters.get('range')
 	var value_size:int = value.size()
-	# Validate dictionary size.
+	# Validate with dictionary size.
 	if range:
 		if value_size > range[1] || value_size < range[0]: return parameters.default
 	return value

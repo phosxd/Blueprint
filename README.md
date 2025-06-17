@@ -112,9 +112,6 @@ In this example, the blueprint specifies:
 
 
 # TO-DO:
-## Blueprint validation:
-Ensure that the Blueprint follows all the rules & only contains valid parameter sets. Currently, an error will likely occur if the Blueprint is not valid, I want to make sure the Blueprint is not put in use if it's not valid.
-
 ## Match errors:
 For `Blueprint.match`, add an option to print the reason the match failed & defaulted to the parameter set default.
 
