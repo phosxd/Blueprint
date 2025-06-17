@@ -1,8 +1,11 @@
 {
 	"id": {
-		"type":"string",
-		"enum":["helmet", "sword", "cookie", "placeholder"],
-		"default":"placeholder"
+		"type": "string",
+		"enum": ["helmet", "sword", "cookie", "placeholder"],
+		"default": "placeholder"
 	},
-	"metadata": {"type":"dict", "default":{}},
+	"metadata": {
+		"type": "dict",
+		"default": {}
+	},
 }

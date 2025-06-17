@@ -1,6 +1,8 @@
 class_name Blueprint
 ## Class for holding a dictionary blueprint.
 
+const TYPE_BLUEPRINT_POINTER:int = TYPE_MAX+1
+
 ## Blueprint error codes.
 enum error {
 	OK,
@@ -84,7 +86,7 @@ static func _validate(data:Dictionary) -> error:
 				'dict': type_param_literal_type = TYPE_DICTIONARY
 				_:
 					if not type_param.begins_with('>'): return error.ERR_BP_PARAMSET_INVALID_TYPE_PARAM
-					type_param_literal_type = '>'
+					type_param_literal_type = TYPE_BLUEPRINT_POINTER
 
 		# Validate "optional" parameter.
 		var optional_param = value.get('optional', false)
@@ -93,15 +95,13 @@ static func _validate(data:Dictionary) -> error:
 		# Validate "default" parameter.
 		var default_param = value.get('default')
 		if default_param == null:
-			if typeof(type_param) == TYPE_STRING:
-				if type_param_literal_type != '>': return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
-			else:
-				return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
+			if type_param_literal_type != TYPE_BLUEPRINT_POINTER: return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
 		var typeof_default_param := typeof(default_param)
 		# Set typeof_default_param to `int` if holds no floating value.
 		if typeof_default_param == TYPE_FLOAT:
 			if round(default_param) == default_param: typeof_default_param = TYPE_INT
-		if typeof_default_param != type_param_literal_type && type_param_literal_type != TYPE_NIL: return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
+		if type_param_literal_type in [TYPE_BLUEPRINT_POINTER, TYPE_NIL]: pass
+		elif typeof_default_param != type_param_literal_type: return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
 
 		# Validate "range" parameter.
 		var range_param = value.get('range')
@@ -158,11 +158,11 @@ func match(object:Dictionary):
 		var object_value = object.get(key)
 		# If value missing, use default.
 		if not object_value && not blueprint_params.get('optional'):
-			if typeof(blueprint_params.type) == TYPE_STRING:
+			if blueprint_params.type:
 				if blueprint_params.type.begins_with('>'):
 					object.set(key, _handle_blueprint_match({}, blueprint_params))
-			else:
-				object.set(key, blueprint_params.default)
+					continue
+			object.set(key, blueprint_params.default)
 			continue
 		# If value does not match enum (if defined), use default.
 		if object_value not in blueprint_params.get('enum',[object_value]):
@@ -175,9 +175,9 @@ func match(object:Dictionary):
 			'float': object.set(key, _handle_float_match(object_value, blueprint_params))
 			'array': object.set(key, _handle_array_match(object_value, blueprint_params))
 			'dict': object.set(key, _handle_dict_match(object_value, blueprint_params))
+			null: object.set(key, object_value)
 			_:
-				if typeof(blueprint_params.type) == TYPE_NIL: pass
-				elif blueprint_params.type.begins_with('>'):
+				if blueprint_params.type.begins_with('>'):
 					object.set(key, _handle_blueprint_match(object_value, blueprint_params))
 				else:
 					assert(false, 'Invalid Blueprint parameters type "%s".' % blueprint_params.type)
