@@ -30,7 +30,7 @@ const error_strings:Array[String] = [
 	'Blueprint parameter set must contain a "type" parameter.',
 	'Blueprint parameter set\'s "type" parameter must be of type `String` & match one of the following values: "string", "int", "float", "array", "dict", ">{blueprint_name}".',
 	'Blueprint parameter set\'s "optional" parameter must be of type `bool`.',
-	'Blueprint parameter set\'s "default" parameter value type must match the `type` parameter & is required when `optional` parameter is false or undefined, or when `type` is not a blueprint.',
+	'Blueprint parameter set\'s "default" parameter value type must match the `type` parameter & is always required except when `type` is not a blueprint pointer.',
 	'Blueprint parameter set\'s "range" parameter must be of type `Array` & have 2 elements of type `int`.',
 	'Blueprint parameter set\'s "enum" parameter must be of type `Array` & have elements of value type that matches `type` parameter.',
 	'Blueprint parameter set\'s "prefix" parameter must be of type `String`.',
@@ -93,13 +93,15 @@ static func _validate(data:Dictionary) -> error:
 		# Validate "default" parameter.
 		var default_param = value.get('default')
 		if default_param == null:
-			if not optional_param: return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
-			if type_param_literal_type != '>': return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
+			if typeof(type_param) == TYPE_STRING:
+				if type_param_literal_type != '>': return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
+			else:
+				return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
 		var typeof_default_param := typeof(default_param)
 		# Set typeof_default_param to `int` if holds no floating value.
 		if typeof_default_param == TYPE_FLOAT:
 			if round(default_param) == default_param: typeof_default_param = TYPE_INT
-		if typeof_default_param != type_param_literal_type: return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
+		if typeof_default_param != type_param_literal_type && type_param_literal_type != TYPE_NIL: return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
 
 		# Validate "range" parameter.
 		var range_param = value.get('range')
@@ -156,8 +158,9 @@ func match(object:Dictionary):
 		var object_value = object.get(key)
 		# If value missing, use default.
 		if not object_value && not blueprint_params.get('optional'):
-			if blueprint_params.type.begins_with('>'):
-				object.set(key, _handle_blueprint_match({}, blueprint_params))
+			if typeof(blueprint_params.type) == TYPE_STRING:
+				if blueprint_params.type.begins_with('>'):
+					object.set(key, _handle_blueprint_match({}, blueprint_params))
 			else:
 				object.set(key, blueprint_params.default)
 			continue
@@ -173,7 +176,8 @@ func match(object:Dictionary):
 			'array': object.set(key, _handle_array_match(object_value, blueprint_params))
 			'dict': object.set(key, _handle_dict_match(object_value, blueprint_params))
 			_:
-				if blueprint_params.type.begins_with('>'):
+				if typeof(blueprint_params.type) == TYPE_NIL: pass
+				elif blueprint_params.type.begins_with('>'):
 					object.set(key, _handle_blueprint_match(object_value, blueprint_params))
 				else:
 					assert(false, 'Invalid Blueprint parameters type "%s".' % blueprint_params.type)

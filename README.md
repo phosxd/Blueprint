@@ -45,11 +45,11 @@ Valid types:
 
 Exceptions:
 - If `null`, the value can be of any type.
-- If begins with `>`, represents a blueprint.
+- If begins with `>`, references a blueprint.
 ### `optional`:
 Expressed as a boolean, determines whether or not this value is required to be included.
 ### `default`:
-Required parameter if `optional` is false or undefined, or if `type` is not a blueprint.
+Required parameter except when `type` parameter is a blueprint pointer.
 Determines what the value should default to if it is not already properly defined.
 ### `range`:
 Expressed as an array of 2 integers, determines the minimum & maximum size or length of the value. If `null`, then the value can have any size or length.
