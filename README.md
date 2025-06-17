@@ -1,5 +1,6 @@
 
 
+
 A Godot-4.4 plugin that validates & corrects dictionary data.
 It allows you to define expected data structures (Blueprints) & compare dictionaries against them.
 
@@ -71,9 +72,23 @@ Expressed as an array of strings, determines the type of all elements in the arr
 ## Player:
 ```json
 {
-	"name": {"type":"string", "range":[4,20], "regex":"[A-Z,a-z,0-9]+", "default":"Placeholder"},
-	"health": {"type":"int", "range":[0,100], "default":100},
-	"inventory": {"type":"array", "range":null, "element_types":[">item"], "default":[]},
+	"name": {
+		"type":"string",
+		"range":[4,20],
+		"regex":"[A-Z,a-z,0-9]+",
+		"default":"Placeholder"
+	},
+	"health": {
+		"type":"int",
+		"range":[0,100],
+		"default":100
+	},
+	"inventory": {
+		"type":"array",
+		"range":null,
+		"element_types":[">item"],
+		"default":[]
+	},
 }
 ```
 In this example, the blueprint specifies:
@@ -84,21 +99,25 @@ In this example, the blueprint specifies:
 ## Item:
 ```json
 {
-	"id": {"type":"string", "default":"Placeholder"},
-	"metadata": {"type":"dict", "optional":true},
+	"id": {
+		"type":"string",
+		"enum":["helmet", "sword", "cookie", "placeholder"],
+		"default":"placeholder"
+	},
+	"metadata": {"type":"dict", "default":{}},
 }
 ```
 In this example, the blueprint specifies:
-- `id` should be a string.
+- `id` should be a string that matches one of the values defined in the `enum` parameter.
 - `metadata` should be a dictionary containing anything, OR should not exist at all.
 
 # Interfaces:
 ## `Blueprint`:
 ### Properties:
-- `data:Dictionary`: The raw Blueprint data.
+- `data:Dictionary`: Blueprint data. If modified, `_validate` needs to be called immediately after.
 ### Methods:
 - `_init(name:String, data:Dictionary) -> void`: Initializes, then registers in the `BlueprintManager`.
-- `match(data:Dictionary) -> Dictionary[String,Variant]`: Matches the `object` to this Blueprint, mismatched values will be fixed. Returns fixed `object`.
+- `match(data:Dictionary)`: Matches the `object` to this Blueprint, mismatched values will be fixed. Returns fixed `object`.
 
 ## `BlueprintManager`:
 ### Properties:
