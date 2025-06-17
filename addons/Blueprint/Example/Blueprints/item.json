@@ -1,4 +1,8 @@
 {
-	"id": {"type":"string", "default":"placeholder"},
+	"id": {
+		"type":"string",
+		"enum":["helmet", "sword", "cookie", "placeholder"],
+		"default":"placeholder"
+	},
 	"metadata": {"type":"dict", "default":{}},
 }

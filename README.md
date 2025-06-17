@@ -1,8 +1,7 @@
 
 
 A Godot-4.4 plugin that validates & corrects dictionary data.
-
-It allows you to define expected data structures (Blueprints) and compare dictionaries against them. This ensures your data conforms to predefined rules, helping you catch errors early and maintain consistency throughout your project.
+It allows you to define expected data structures (Blueprints) & compare dictionaries against them.
 
 # Table of Contents:
 - [Installation](#how-to-install)
@@ -30,7 +29,7 @@ Alternatively, you can download from the "main" branch which may include new fea
 ## Making a `Blueprint`:
 Generally you should make a blueprint by writing it in a `.json` file. The JSON file can be read & registered during run-time by using the `add_blueprint_from_file` method in the `BlueprintManager` class.
 
-A blueprint consists of key/value pairs where the value is a dictionary of parameters that determine what is expected of the value being matched to it.
+A blueprint consists of key/value pairs where the value is a dictionary of parameters (aka "parameter set") that determine what is expected of the value being matched to it.
 
 ## Base parameters:
 ### `type`:

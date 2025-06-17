@@ -12,5 +12,6 @@ func _ready() -> void:
 	if not player_blueprint: return
 	var matched = player_blueprint.match({
 		"health": 50,
+		"inventory": [{'id':'cookie'}, {'id':'helmet'}]
 	})
 	print(matched)

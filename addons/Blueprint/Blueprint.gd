@@ -11,6 +11,7 @@ enum error {
 	ERR_BP_PARAMSET_INVALID_OPTIONAL_PARAM,
 	ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM,
 	ERR_BP_PARAMSET_INVALID_RANGE_PARAM,
+	ERR_BP_PARAMSET_INVALID_ENUM_PARAM
 }
 ## Blueprint errors as explanatory strings.
 const error_strings:Array[String] = [
@@ -20,8 +21,9 @@ const error_strings:Array[String] = [
 	'Blueprint parameter set must contain a "type" parameter.',
 	'Blueprint parameter set\'s "type" parameter must be of type `String` & match one of the following values: "string", "int", "float", "array", "dict", ">{blueprint_name}".',
 	'Blueprint parameter set\'s "optional" parameter must be of type `bool`.',
-	'Blueprint parameter set\'s "default" parameter value type must match the `type` parameter.',
+	'Blueprint parameter set\'s "default" parameter value type must match the `type` parameter & is required when `optional` parameter is false or undefined, or when `type` is not a blueprint.',
 	'Blueprint parameter set\'s "range" parameter must be of type `Array` & have 2 elements of type `int`.',
+	'Blueprint parameter set\'s "enum" parameter must be of type `Array` & have elements of value type that matches `type` parameter.',
 ]
 ## Blueprint data.
 var data:Dictionary
@@ -52,27 +54,31 @@ static func _validate(data:Dictionary) -> error:
 
 		# Validate "type" parameter.
 		var type_param = value.get('type')
-		if type_param == null: return error.ERR_BP_PARAMSET_MISSING_TYPE
-		if typeof(type_param) != TYPE_STRING: return error.ERR_BP_PARAMSET_INVALID_TYPE_PARAM
-		var type_param_literal_type:Variant.Type # Track the type, for use in other checks.
-		match type_param:
-			'string': type_param_literal_type = TYPE_STRING
-			'int': type_param_literal_type = TYPE_INT
-			'float': type_param_literal_type = TYPE_FLOAT
-			'array': type_param_literal_type = TYPE_ARRAY
-			'dict': type_param_literal_type = TYPE_DICTIONARY
-			_:
-				if not type_param.begins_with('>'): return error.ERR_BP_PARAMSET_INVALID_TYPE_PARAM
-				type_param_literal_type = TYPE_NIL
+		var type_param_literal_type # Track the type, for use in other checks.
+		if type_param == null:
+			type_param_literal_type = TYPE_NIL
+		else:
+			if typeof(type_param) != TYPE_STRING: return error.ERR_BP_PARAMSET_INVALID_TYPE_PARAM
+			match type_param:
+				'string': type_param_literal_type = TYPE_STRING
+				'int': type_param_literal_type = TYPE_INT
+				'float': type_param_literal_type = TYPE_FLOAT
+				'array': type_param_literal_type = TYPE_ARRAY
+				'dict': type_param_literal_type = TYPE_DICTIONARY
+				_:
+					if not type_param.begins_with('>'): return error.ERR_BP_PARAMSET_INVALID_TYPE_PARAM
+					type_param_literal_type = '>'
 
 		# Validate "optional" parameter.
-		var optional_param = value.get('optional')
-		if optional_param != null && typeof(optional_param) != TYPE_BOOL: return error.ERR_BP_PARAMSET_INVALID_OPTIONAL_PARAM
+		var optional_param = value.get('optional', false)
+		if typeof(optional_param) != TYPE_BOOL: return error.ERR_BP_PARAMSET_INVALID_OPTIONAL_PARAM
 
 		# Validate "default" parameter.
 		var default_param = value.get('default')
+		if default_param == null:
+			if not optional_param: return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
+			if type_param_literal_type != '>': return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
 		var typeof_default_param := typeof(default_param)
-
 		# Set typeof_default_param to `int` if holds no floating value.
 		if typeof_default_param == TYPE_FLOAT:
 			if round(default_param) == default_param: typeof_default_param = TYPE_INT
@@ -88,6 +94,13 @@ static func _validate(data:Dictionary) -> error:
 				if round(item) != item: return error.ERR_BP_PARAMSET_INVALID_RANGE_PARAM
 				count += 1
 			if count != 2: return error.ERR_BP_PARAMSET_INVALID_RANGE_PARAM
+
+		# Validate "enum" parameter.
+		var enum_param = value.get('enum')
+		if enum_param != null:
+			if typeof(enum_param) != TYPE_ARRAY: return error.ERR_BP_PARAMSET_INVALID_ENUM_PARAM
+			for item in enum_param:
+				if typeof(item) != type_param_literal_type: return error.ERR_BP_PARAMSET_INVALID_ENUM_PARAM
 
 	return error.OK
 
@@ -177,7 +190,7 @@ static func _handle_float_match(value, parameters:Dictionary):
 
 static func _handle_array_match(value, parameters:Dictionary):
 	if typeof(value) != TYPE_ARRAY: return parameters.default # Validate value type.
-	var new_value:Array = value.duplicate(true)
+	var new_value:Array = []
 	var range = parameters.get('range')
 	var value_size:int = value.size()
 	# Validate array size.
@@ -189,19 +202,29 @@ static func _handle_array_match(value, parameters:Dictionary):
 		var element_types_size:int = element_types.size()
 		var index:int = 0
 		for item in value:
+			var create_element:bool = true
 			var item_type:Variant.Type = typeof(item)
 			var expected_type:String
 			if element_types_size == 1: expected_type = element_types[0]
 			else: expected_type = element_types[index]
+			# Check if item matches expected type.
 			match expected_type:
-				'string': if item_type != TYPE_STRING: return parameters.default
-				'int': if item_type != TYPE_INT: return parameters.default
-				'float': if item_type != TYPE_FLOAT: return parameters.default
-				'array': if item_type != TYPE_ARRAY: return parameters.default
-				'dict': if item_type != TYPE_DICTIONARY: return parameters.default
+				'string': if item_type != TYPE_STRING: create_element = false
+				'int': if item_type != TYPE_INT: create_element = false
+				'float': if item_type != TYPE_FLOAT: create_element = false
+				'array': if item_type != TYPE_ARRAY: create_element = false
+				'dict': if item_type != TYPE_DICTIONARY: create_element = false
 				_:
-					if expected_type.begins_with('>'): assert(false, 'Not currently supporting array element type of "blueprint pointer".')
-					else: assert(false, 'Invalid Blueprint parameters array element type "%s".' % expected_type)
+					# If expecting blueprint, match item to the expected blueprint.
+					if expected_type.begins_with('>'):
+						if item_type != TYPE_DICTIONARY: create_element = false
+						else:
+							item = _handle_blueprint_match(item, {'type':expected_type, 'default':{}})
+					# If unexpected type, skip.
+					else: create_element = false
+			# Put item into new array, if valid.
+			if create_element:
+				new_value.append(item)
 			index += 1
 	return new_value
 
