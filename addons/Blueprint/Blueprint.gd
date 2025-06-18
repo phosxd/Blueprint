@@ -44,15 +44,40 @@ const error_strings:Array[String] = [
 	'Blueprint parameter set\'s "regex" parameter is only expected when the parameter set\'s "type" parameter is "string".',
 	'Blueprint parameter set\'s "element_types" parameter is only expected when the parameter set\'s "type" parameter is "array".',
 ]
+
+## RegEx patterns available for all Blueprints. When adding to or modifiying this, make sure to update `regex_patterns_compiled` accordingly.
+# Validated & tested with "regex101.com".
+static var regex_patterns:Dictionary[String,String] = {
+	'digits': r'[0-9]+',
+	'integer': r'\-?[0-9]+',
+	'float': r'\-?[0-9]+(\.[0-9]+)?',
+	'letters': r'[[:alpha:]]+',
+	'uppercase': r'[[:upper:]]+',
+	'lowercase': r'[[:lower:]]+',
+	'ascii': r'[[:ascii:]]+',
+	'hexadecimal': r'[[:xdigit:]]+',
+	'date_yyyy_mm_dd': r"(?(DEFINE)(?'sep'\/|\-| ))[0-9]{4}(?&sep)([1-9](?&sep)|10(?&sep)|11(?&sep)|12(?&sep))([0-9]$|[0-3][0-9])", # Imperfect: allows 39 days.
+	'date_mm_dd_yyyy': r"(?(DEFINE)(?'sep'\/|\-| ))([1-9](?&sep)|10(?&sep)|11(?&sep)|12(?&sep))([0-9]|[0-3][0-9])(?&sep)[0-9]{4}", # Imperfect: allowed 39 days.
+	'time_12_hour': r'([1-9]|10|11|12):[0-5][0-9]',
+	'time_12_hour_signed': r'([1-9]|10|11|12):[0-5][0-9] ?(A|P)M',
+	'time_24_hour': r'([0-9]|1[0-9]|2[0-3]):[0-5][0-9]',
+	'email': r'(([[:alnum:]_-])|((?<!\.|^)\.))+@(?1)+', # Not perfect: doesn't enforce top-level domain name, allows "." at the beginning of the domain name & at the end of username & top-level domain name.
+	'url': r'((http:\/\/)|(https:\/\/)|(www\.)).+', # Only validates the protocol, then allows absolutely anything after.
+}
+static var regex_patterns_compiled:Dictionary[String,RegEx] = {}
+
 ## Blueprint data. If modified, `_validate` needs to be called immediately after.
 var data:Dictionary
 ## Whether or not this Blueprint is valid for use.
 var valid:bool
 
 
-
 ## Initializes the Blueprint.
 func _init(name:String, data:Dictionary) -> void:
+	# Compile RegEx patterns.
+	for key in regex_patterns:
+		regex_patterns_compiled[key] = RegEx.new()
+		var err = regex_patterns_compiled[key].compile(regex_patterns[key])
 	# If invalid Blueprint, do nothing.
 	var validation_error:error = _validate(data)
 	if validation_error: 
@@ -187,6 +212,16 @@ func match(object:Dictionary):
 
 
 
+## Adds the RegEx pattern to the list of available formats for all Blueprints.
+static func add_format(name:String, regex_pattern:String) -> void:
+	regex_patterns[name] = regex_pattern
+	var new_regex := RegEx.new()
+	new_regex.compile(regex_pattern)
+	regex_patterns_compiled[name] = new_regex
+
+
+
+
 static func _handle_string_match(value, parameters:Dictionary):
 	if typeof(value) != TYPE_STRING: return parameters.default # Validate value type.
 	# Validate with string length.
@@ -209,10 +244,21 @@ static func _handle_string_match(value, parameters:Dictionary):
 		regex.compile(regex_pattern, false)
 		var result = regex.search(value)
 		if not result: return parameters.default
-		result = ''.join(result.strings)
-		print(result)
-		if result == '' || value != result: return parameters.default
-		
+		var matched:bool = false
+		for string:String in result.strings:
+			if string == value: matched = true
+		if not matched: return parameters.default
+	# Validate with format.
+	var format = parameters.get('format')
+	if format:
+		var format_regex = regex_patterns_compiled.get(format)
+		if not format_regex: assert(false, 'Cannot match non-existent format "%s".' % format)
+		var result = format_regex.search(value)
+		if not result: return parameters.default
+		var matched:bool = false
+		for string:String in result.strings:
+			if string == value: matched = true
+		if not matched: return parameters.default
 	
 	return value
 
@@ -289,6 +335,7 @@ static func _handle_dict_match(value, parameters:Dictionary):
 static func _handle_blueprint_match(value, parameters:Dictionary):
 	var blueprint_name:String = parameters.type.trim_prefix('>')
 	var blueprint = BlueprintManager.get_blueprint(blueprint_name)
+	if not blueprint: assert(false, 'Cannot match against non-existent Blueprint "%s".' % blueprint_name)
 	var empty_matched:Dictionary = blueprint.match({})
 	if typeof(value) != TYPE_DICTIONARY: return empty_matched # Validate value type.
 	var matched:Dictionary = blueprint.match(value)

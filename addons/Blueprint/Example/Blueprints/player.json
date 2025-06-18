@@ -16,4 +16,9 @@
 		"element_types": [">item"],
 		"default": []
 	},
+	"date_joined": {
+		"type": "string",
+		"format": "date_yyyy_mm_dd",
+		"default": "none",
+	},
 }

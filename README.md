@@ -1,6 +1,7 @@
 
 
 
+
 A Godot-4.4 plugin that validates & corrects dictionary data.
 It allows you to define expected data structures (Blueprints) & compare dictionaries against them.
 
@@ -61,8 +62,26 @@ Expressed as an array, determines the expected values.
 Expressed as a string, determines the prefix the value must have.
 ### `suffix`:
 Expressed as a string, determines the suffix the value must have.
+### `format`:
+Expressed as a string, determines the format the value must follow. Custom formats can be added to Blueprints, see [add_format](#methods).
+Valid formats:
+- "digits"
+- "integer"
+- "float"
+- "letters"
+- "uppercase"
+- "lowercase"
+- "ascii"
+- "hexadecimal"
+- "date_yyyy_mm_dd" (Imperfect)
+- "date_mm_dd_yyyy" (Imperfect)
+- "time_12_hour"
+- "time_12_hour_signed"
+- "time_24_hour"
+- "email" (Imperfect)
+- "url" (Imperfect)
 ### `regex`:
-Expressed as a string, determines the Regex pattern the value must follow. (Advanced).
+Expressed as a string, determines the RegEx pattern the value must follow. (Advanced).
 
 ## Array parameters:
 ### `element_types`:
@@ -73,21 +92,26 @@ Expressed as an array of strings, determines the type of all elements in the arr
 ```json
 {
 	"name": {
-		"type":"string",
-		"range":[4,20],
-		"regex":"[A-Z,a-z,0-9]+",
-		"default":"Placeholder"
+		"type": "string",
+		"range": [4,20],
+		"regex": "[A-Z,a-z,0-9]+",
+		"default": "Placeholder"
 	},
 	"health": {
-		"type":"int",
-		"range":[0,100],
-		"default":100
+		"type": "int",
+		"range": [0,100],
+		"default": 100
 	},
 	"inventory": {
-		"type":"array",
-		"range":null,
-		"element_types":[">item"],
-		"default":[]
+		"type": "array",
+		"range": null,
+		"element_types": [">item"],
+		"default": []
+	},
+	"date_joined": {
+		"type": "string",
+		"format": "date_yyyy_mm_dd",
+		"default": "none",
 	},
 }
 ```
@@ -95,6 +119,7 @@ In this example, the blueprint specifies:
 - `name` should be a string with a length between 4 & 20 characters, only containing letters & digits (expressed through Regex).
 - `health` should be an integer between 0 & 100.
 - `inventory` should be an array with unlimited size, and that contains dictionaries matching the item blueprint.
+- `date_joined` should be a string that follows the YYYY/MM/DD date format (E.g. "2008/12/5").
 
 ## Item:
 ```json
@@ -118,6 +143,7 @@ In this example, the blueprint specifies:
 ### Methods:
 - `_init(name:String, data:Dictionary) -> void`: Initializes, then registers in the `BlueprintManager`.
 - `match(data:Dictionary)`: Matches the `object` to this Blueprint, mismatched values will be fixed. Returns fixed `object`.
+- `add_format(name:String, regex_pattern:String) -> void`: Adds the RegEx pattern to the list of available formats for all Blueprints.
 
 ## `BlueprintManager`:
 ### Properties:
@@ -133,11 +159,3 @@ In this example, the blueprint specifies:
 # TO-DO:
 ## Match errors:
 For `Blueprint.match`, add an option to print the reason the match failed & defaulted to the parameter set default.
-
-## Regex alternatives for common uses:
-An option in Blueprint parameters to specify a `format` like a time, date, email, url, and other common formats. This would be much better than having to use ambiguous Regex patterns.
-
-Custom formats will also be available for the user to employ.
-
-## Pre-compiled Regex patterns:
-Instead of compiling Regex patterns when matching, compile & store all Regex patterns when first initializing the Blueprint.
