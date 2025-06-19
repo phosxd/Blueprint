@@ -73,13 +73,13 @@ Valid formats:
 - "lowercase"
 - "ascii"
 - "hexadecimal"
-- "date_yyyy_mm_dd" (Imperfect)
-- "date_mm_dd_yyyy" (Imperfect)
+- "date_yyyy_mm_dd"
+- "date_mm_dd_yyyy"
 - "time_12_hour"
 - "time_12_hour_signed"
 - "time_24_hour"
-- "email" (Imperfect)
-- "url" (Imperfect)
+- "email"
+- "url"
 ### `regex`:
 Expressed as a string, determines the RegEx pattern the value must follow. (Advanced).
 
@@ -125,11 +125,14 @@ In this example, the blueprint specifies:
 ```json
 {
 	"id": {
-		"type":"string",
-		"enum":["helmet", "sword", "cookie", "placeholder"],
-		"default":"placeholder"
+		"type": "string",
+		"enum": ["helmet", "sword", "cookie", "placeholder"],
+		"default": "placeholder"
 	},
-	"metadata": {"type":"dict", "default":{}},
+	"metadata": {
+		"type": "dict",
+		"default": {}
+	},
 }
 ```
 In this example, the blueprint specifies:

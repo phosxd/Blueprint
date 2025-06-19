@@ -56,13 +56,13 @@ static var regex_patterns:Dictionary[String,String] = {
 	'lowercase': r'[[:lower:]]+',
 	'ascii': r'[[:ascii:]]+',
 	'hexadecimal': r'[[:xdigit:]]+',
-	'date_yyyy_mm_dd': r"(?(DEFINE)(?'sep'\/|\-| ))[0-9]{4}(?&sep)([1-9](?&sep)|10(?&sep)|11(?&sep)|12(?&sep))([0-9]$|[0-3][0-9])", # Imperfect: allows 39 days.
-	'date_mm_dd_yyyy': r"(?(DEFINE)(?'sep'\/|\-| ))([1-9](?&sep)|10(?&sep)|11(?&sep)|12(?&sep))([0-9]|[0-3][0-9])(?&sep)[0-9]{4}", # Imperfect: allowed 39 days.
+	'date_yyyy_mm_dd': r"(?(DEFINE)(?'sep'\/|\-| ))[0-9]{4}(?&sep)([1-9](?&sep)|10(?&sep)|11(?&sep)|12(?&sep))([0-9]$|[0-2][0-9]|3[0-1])",
+	'date_mm_dd_yyyy': r"(?(DEFINE)(?'sep'\/|\-| ))([1-9](?&sep)|10(?&sep)|11(?&sep)|12(?&sep))([0-9]|[0-2][0-9]|3[0-1])(?&sep)[0-9]{4}",
 	'time_12_hour': r'([1-9]|10|11|12):[0-5][0-9]',
 	'time_12_hour_signed': r'([1-9]|10|11|12):[0-5][0-9] ?(A|P)M',
 	'time_24_hour': r'([0-9]|1[0-9]|2[0-3]):[0-5][0-9]',
 	'email': r'(([[:alnum:]_-])|((?<!\.|^)\.))+@(?1)+', # Not perfect: doesn't enforce top-level domain name, allows "." at the beginning of the domain name & at the end of username & top-level domain name.
-	'url': r'((http:\/\/)|(https:\/\/)|(www\.)).+', # Only validates the protocol, then allows absolutely anything after.
+	'url': r'/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#()?&\/=]*)',
 }
 static var regex_patterns_compiled:Dictionary[String,RegEx] = {}
 
@@ -74,10 +74,11 @@ var valid:bool
 
 ## Initializes the Blueprint.
 func _init(name:String, data:Dictionary) -> void:
-	# Compile RegEx patterns.
-	for key in regex_patterns:
-		regex_patterns_compiled[key] = RegEx.new()
-		var err = regex_patterns_compiled[key].compile(regex_patterns[key])
+	# Compile RegEx patterns, if not already.
+	if regex_patterns_compiled == {}:
+		for key in regex_patterns:
+			regex_patterns_compiled[key] = RegEx.new()
+			var err = regex_patterns_compiled[key].compile(regex_patterns[key])
 	# If invalid Blueprint, do nothing.
 	var validation_error:error = _validate(data)
 	if validation_error: 
