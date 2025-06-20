@@ -2,7 +2,7 @@
 	"name": {
 		"type": "string",
 		"range": [4,20],
-		"regex": "[A-Z,a-z,0-9]+",
+		"regex": "[[:alnum:]]+",
 		"default": "Placeholder"
 	},
 	"health": {

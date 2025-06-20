@@ -94,7 +94,7 @@ Expressed as an array of strings, determines the type of all elements in the arr
 	"name": {
 		"type": "string",
 		"range": [4,20],
-		"regex": "[A-Z,a-z,0-9]+",
+		"regex": "[[:alnum:]]+",
 		"default": "Placeholder"
 	},
 	"health": {
