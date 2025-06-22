@@ -66,7 +66,7 @@ static var regex_patterns:Dictionary[String,String] = {
 }
 static var regex_patterns_compiled:Dictionary[String,RegEx] = {}
 
-## Blueprint data. If modified, `_validate` needs to be called immediately after.
+## Blueprint data. If modified (which is not recommended), `_validate` needs to be called immediately after.
 var data:Dictionary
 ## Whether or not this Blueprint is valid for use.
 var valid:bool

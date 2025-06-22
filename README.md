@@ -16,20 +16,22 @@ It allows you to define expected data structures (Blueprints) & compare dictiona
 If everything installed correctly, both the `Blueprint` & `BlueprintManager` classes should be globally available in your GDScripts.
 
 ### From Asset Library:
-Blueprint currently is not available on the Godot Asset Library. I might submit it when I feel it is ready for serious use.
-
+ 1. In your Godot project, navigate to the "Asset Library" tab & search for ["Blueprint - Data Validation" or just "Blueprint"](https://godotengine.org/asset-library/asset/4098).
+ 2. Click "Download" & make sure only the `addons/Blueprint` folder is selected, you dont need any of the other files.
+ 3. Click "Install" to merge the selected files with your project.
+ 4. (Optional) Activate the plugin from `Project -> Project Setings -> Plugins`, then refresh the project.
 ### From Github:
  1. Navigate to the latest [Github](https://github.com/phosxd/Blueprint) release. Typically found on the right-hand side under "Releases".
  2. Download the ZIP file for the latest release.
  3. Unpack the ZIP file to a new folder & delete the ZIP file.
  4. Move the `addons/Blueprint` folder from your new folder to the "addons" folder in your Godot project.
- 5. Activate the plugin from `Project -> Project Setings -> Plugins`, then refresh the project.
+ 5. (Optional) Activate the plugin from `Project -> Project Setings -> Plugins`, then refresh the project.
 
 Alternatively, you can download from the "main" branch which may include new features but can also contain unfinished code or unexpected issues. Bug reports for unreleased versions are not accepted.
 
 # How to use:
 ## Making a `Blueprint`:
-Generally you should make a blueprint by writing it in a `.json` file. The JSON file can be read & registered during run-time by using the `add_blueprint_from_file` method in the `BlueprintManager` class.
+Generally you should make a blueprint by writing it in a `.json` file. The JSON file can be read & registered during run-time with the `add_blueprint_from_file` method from the `BlueprintManager` class.
 
 A blueprint consists of key/value pairs where the value is a dictionary of parameters (aka "parameter set") that determine what is expected of the value being matched to it.
 
@@ -82,6 +84,7 @@ Valid formats:
 - "url"
 ### `regex`:
 Expressed as a string, determines the RegEx pattern the value must follow. (Advanced).
+For information on what RegEx is & how it works, refer to the [Regular Expressions Wikipedia page](https://en.wikipedia.org/wiki/Regular_expression).
 
 ## Array parameters:
 ### `element_types`:
@@ -143,7 +146,7 @@ In this example, the blueprint specifies:
 # Interfaces:
 ## `Blueprint`:
 ### Properties:
-- `data:Dictionary`: Blueprint data. If modified, `_validate` needs to be called immediately after.
+- `data:Dictionary`: Blueprint data. If modified (which is not recommended), `_validate` needs to be called immediately after.
 ### Methods:
 - `_init(name:String, data:Dictionary) -> void`: Initializes, then registers in the `BlueprintManager`.
 - `match(data:Dictionary)`: Matches the `object` to this Blueprint, mismatched values will be fixed. Returns fixed `object`.
