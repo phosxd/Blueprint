@@ -72,8 +72,7 @@ var data:Dictionary
 var valid:bool
 
 
-## Initializes the Blueprint.
-func _init(name:String, data:Dictionary) -> void:
+func _init(name:String, data:Dictionary) -> void: ## Initializes the Blueprint & registers in the `BlueprintManager`.
 	# Compile RegEx patterns, if not already.
 	if regex_patterns_compiled == {}:
 		for key in regex_patterns:
@@ -176,8 +175,7 @@ static func _validate(data:Dictionary) -> error:
 
 
 
-## Matches the `object` to this Blueprint, mismatched values will be fixed. Returns fixed `object`. Returns `null` if Blueprint is invalid.
-func match(object:Dictionary):
+func match(object:Dictionary): ## Matches the `object` to this Blueprint, mismatched values will be fixed. Returns fixed `object`. Returns `null` if Blueprint is invalid.
 	if not self.valid: return # Return if Blueprint is invalid.
 	for key in self.data:
 		var blueprint_params = self.data[key]
@@ -216,8 +214,7 @@ func match(object:Dictionary):
 
 
 
-## Adds the RegEx pattern to the list of available formats for all Blueprints.
-static func add_format(name:String, regex_pattern:String) -> void:
+static func add_format(name:String, regex_pattern:String) -> void: ## Adds the RegEx pattern to the list of available formats for all Blueprints.
 	regex_patterns[name] = regex_pattern
 	var new_regex := RegEx.new()
 	new_regex.compile(regex_pattern)
