@@ -151,12 +151,12 @@ In this example, the blueprint specifies:
 
 ## `BlueprintManager`:
 ### Properties:
-- `registered_blueprints:Dictionary[String,Blueprint]`: All currently registered Blueprints.
+- `registered_blueprints:Dictionary[String,Blueprint]`: All currently registered `Blueprint`s.
 ### Methods:
-- `add_blueprint(name:String, blueprint:Blueprint) -> void`: Registers the Blueprint with the given name. Automatically called in `Blueprint._init`.
-- `remove_blueprint(name:String) -> void`: Removes the Blueprint by it's registered name. Does nothing if it doesn't exist.
-- `get_blueprint(name:String) -> Blueprint`: Returns the Blueprint by it's registered name. Returns `null` if it doesn't exist.
-- `add_blueprint_from_file(name:String, filepath:String) -> void`: Registers a Blueprint from a JSON file. Does nothing if error occurs.
+- `add_blueprint(name:String, blueprint:Blueprint) -> bool`: Registers the `Blueprint`. Returns true if successfully added the `Blueprint`. Automatically called when a `Blueprint` is created.
+- `remove_blueprint(name:String) -> void`: Removes the `Blueprint` by it's registered name. Does nothing if it doesn't exist.
+- `get_blueprint(name:String) -> Blueprint`: Returns the `Blueprint` by it's registered name. Returns `null` if it doesn't exist.
+- `add_blueprint_from_file(name:String, filepath:String) -> bool`: Registers a `Blueprint` from a JSON file. Returns whether or not the `Blueprint` is valid.
 
 
 
