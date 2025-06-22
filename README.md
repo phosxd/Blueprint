@@ -131,7 +131,8 @@ In this example, the blueprint specifies:
 	},
 	"metadata": {
 		"type": "dict",
-		"default": {}
+		"default": {},
+		"optional": true,
 	},
 }
 ```

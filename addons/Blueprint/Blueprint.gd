@@ -182,8 +182,11 @@ func match(object:Dictionary):
 	for key in self.data:
 		var blueprint_params = self.data[key]
 		var object_value = object.get(key)
+		# If value missing & is optional, skip.
+		if not object_value && blueprint_params.get('optional') == true:
+			continue
 		# If value missing, use default.
-		if not object_value && not blueprint_params.get('optional'):
+		if not object_value:
 			if blueprint_params.type:
 				if blueprint_params.type.begins_with('>'):
 					object.set(key, _handle_blueprint_match({}, blueprint_params))
