@@ -22,6 +22,7 @@ enum error {
 	ERR_BP_PARAMSET_UNEXPECTED_SUFFIX_PARAM,
 	ERR_BP_PARAMSET_UNEXPECTED_REGEX_PARAM,
 	ERR_BP_PARAMSET_UNEXPECTED_ELEMENT_TYPES_PARAM,
+	ERR_BP_DATA_INVALID_TYPE,
 }
 
 ## Blueprint errors as explanatory strings.
@@ -33,7 +34,7 @@ const error_strings:Array[String] = [
 	'Blueprint parameter set\'s "type" parameter must be of type `String` & match one of the following values: "string", "int", "float", "array", "dict", ">{blueprint_name}".',
 	'Blueprint parameter set\'s "optional" parameter must be of type `bool`.',
 	'Blueprint parameter set\'s "default" parameter value type must match the `type` parameter & is always required except when `type` is not a blueprint pointer.',
-	'Blueprint parameter set\'s "range" parameter must be of type `Array` & have 2 elements of type `int`.',
+	'Blueprint parameter set\'s "range" parameter must be of type `Array` & have 2 elements of type `int`, or `float` if "type" parameter is "float".',
 	'Blueprint parameter set\'s "enum" parameter must be of type `Array` & have elements of value type that matches `type` parameter.',
 	'Blueprint parameter set\'s "prefix" parameter must be of type `String`.',
 	'Blueprint parameter set\'s "suffix" parameter must be of type `String`.',
@@ -43,6 +44,7 @@ const error_strings:Array[String] = [
 	'Blueprint parameter set\'s "suffix" parameter is only expected when the parameter set\'s "type" parameter is "string".',
 	'Blueprint parameter set\'s "regex" parameter is only expected when the parameter set\'s "type" parameter is "string".',
 	'Blueprint parameter set\'s "element_types" parameter is only expected when the parameter set\'s "type" parameter is "array".',
+	'Blueprint data should only be of type `Dictionary`.',
 ]
 
 ## RegEx patterns available for all Blueprints. When adding to or modifiying this, make sure to update `regex_patterns_compiled` accordingly.
@@ -66,13 +68,13 @@ static var regex_patterns:Dictionary[String,String] = {
 }
 static var regex_patterns_compiled:Dictionary[String,RegEx] = {}
 
-## Blueprint data. If modified (which is not recommended), `_validate` needs to be called immediately after.
-var data:Dictionary
+## Blueprint data. Should only be of type `Dictionary` or `Array`. If modified (which is not recommended), `_validate` needs to be called immediately after.
+var data
 ## Whether or not this Blueprint is valid for use.
 var valid:bool
 
 
-func _init(name:String, data:Dictionary) -> void: ## Initializes the Blueprint & registers in the `BlueprintManager`.
+func _init(name:String, data:Dictionary) -> void: ## Initializes the `Blueprint` & registers in the `BlueprintManager`. "data" parameter should be a `Dictionary`.
 	# Compile RegEx patterns, if not already.
 	if regex_patterns_compiled == {}:
 		for key in regex_patterns:
@@ -92,8 +94,12 @@ func _init(name:String, data:Dictionary) -> void: ## Initializes the Blueprint &
 
 ## Checks if the data is a valid Blueprint. Returns Blueprint error code.
 static func _validate(data:Dictionary) -> error:
+	var typeof_data:Variant.Type = typeof(data)
+	if typeof_data not in [TYPE_DICTIONARY]: return error.ERR_BP_DATA_INVALID_TYPE
 	for key in data:
-		var value = data[key]
+		var value
+		if typeof_data == TYPE_DICTIONARY: value = data[key]
+		else: value = key
 		if typeof(value) != TYPE_DICTIONARY: return error.ERR_BP_PARAMSET_NOT_DICTIONARY
 
 		# Validate "type" parameter.
@@ -125,7 +131,9 @@ static func _validate(data:Dictionary) -> error:
 		# Set typeof_default_param to `int` if holds no floating value.
 		if typeof_default_param == TYPE_FLOAT:
 			if round(default_param) == default_param: typeof_default_param = TYPE_INT
+		# Return error if "default" is of a different type than "type".
 		if type_param_literal_type in [TYPE_BLUEPRINT_POINTER, TYPE_NIL]: pass
+		elif typeof_default_param == TYPE_INT && type_param_literal_type == TYPE_FLOAT: pass
 		elif typeof_default_param != type_param_literal_type: return error.ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM
 
 		# Validate "range" parameter.
@@ -135,7 +143,9 @@ static func _validate(data:Dictionary) -> error:
 			var count:int = 0
 			for item in range_param:
 				if typeof(item) not in [TYPE_INT, TYPE_FLOAT]: return error.ERR_BP_PARAMSET_INVALID_RANGE_PARAM
-				if round(item) != item: return error.ERR_BP_PARAMSET_INVALID_RANGE_PARAM
+				# Return error if using a `float` value when the "type" parameter is not also `float`.
+				if type_param_literal_type != TYPE_FLOAT:
+					if round(item) != item: return error.ERR_BP_PARAMSET_INVALID_RANGE_PARAM
 				count += 1
 			if count != 2: return error.ERR_BP_PARAMSET_INVALID_RANGE_PARAM
 
@@ -178,8 +188,10 @@ static func _validate(data:Dictionary) -> error:
 func match(object:Dictionary): ## Matches the `object` to this Blueprint, mismatched values will be fixed. Returns fixed `object`. Returns `null` if Blueprint is invalid.
 	if not self.valid: return # Return if Blueprint is invalid.
 	for key in self.data:
-		var blueprint_params = self.data[key]
-		var object_value = object.get(key)
+		var blueprint_params
+		var object_value
+		blueprint_params = self.data[key]
+		object_value = object.get(key)
 		# If value missing & is optional, skip.
 		if not object_value && blueprint_params.get('optional') == true:
 			continue
