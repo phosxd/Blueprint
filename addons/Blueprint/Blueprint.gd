@@ -31,7 +31,7 @@ const error_strings:Array[String] = [
 	'Unexpected failure.',
 	'Blueprint parameter set must be of type `Dictionary`.',
 	'Blueprint parameter set must contain a "type" parameter.',
-	'Blueprint parameter set\'s "type" parameter must be of type `String` & match one of the following values: "string", "int", "float", "array", "dict", ">{blueprint_name}".',
+	'Blueprint parameter set\'s "type" parameter must be of type `String` & match one of the following values: "string", "bool", "int", "float", "array", "dict", ">{blueprint_name}".',
 	'Blueprint parameter set\'s "optional" parameter must be of type `bool`.',
 	'Blueprint parameter set\'s "default" parameter value type must match the `type` parameter & is always required except when `type` is not a blueprint pointer.',
 	'Blueprint parameter set\'s "range" parameter must be of type `Array` & have 2 elements of type `int`, or `float` if "type" parameter is "float".',
@@ -111,6 +111,7 @@ static func _validate(data:Dictionary) -> error:
 			if typeof(type_param) != TYPE_STRING: return error.ERR_BP_PARAMSET_INVALID_TYPE_PARAM
 			match type_param:
 				'string': type_param_literal_type = TYPE_STRING
+				'bool': type_param_literal_type = TYPE_BOOL
 				'int': type_param_literal_type = TYPE_INT
 				'float': type_param_literal_type = TYPE_FLOAT
 				'array': type_param_literal_type = TYPE_ARRAY
@@ -210,6 +211,7 @@ func match(object:Dictionary): ## Matches the `object` to this Blueprint, mismat
 		# Match.
 		match blueprint_params.type:
 			'string': object.set(key, _handle_string_match(object_value, blueprint_params))
+			'bool': object.set(key, _handle_bool_match(object_value, blueprint_params))
 			'int': object.set(key, _handle_int_match(object_value, blueprint_params))
 			'float': object.set(key, _handle_float_match(object_value, blueprint_params))
 			'array': object.set(key, _handle_array_match(object_value, blueprint_params))
@@ -276,8 +278,14 @@ static func _handle_string_match(value, parameters:Dictionary):
 	return value
 
 
+static func _handle_bool_match(value, parameters:Dictionary):
+	if typeof(value) != TYPE_BOOL: return parameters.default # Validate value type.
+	return value
+
+
 static func _handle_int_match(value, parameters:Dictionary):
-	if typeof(value) != TYPE_INT: return parameters.default # Validate value type.
+	if typeof(value) not in [TYPE_INT, TYPE_FLOAT]: return parameters.default # Validate value type.
+	if round(value) != value: return parameters.default
 	var range = parameters.get('range')
 	# Validate with min/max.
 	if range:
@@ -286,7 +294,7 @@ static func _handle_int_match(value, parameters:Dictionary):
 
 
 static func _handle_float_match(value, parameters:Dictionary):
-	if typeof(value) != TYPE_FLOAT: return parameters.default # Validate value type.
+	if typeof(value) not in [TYPE_INT, TYPE_FLOAT]: return parameters.default # Validate value type.
 	var range = parameters.get('range')
 	# Validate with min/max.
 	if range:

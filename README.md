@@ -41,6 +41,7 @@ Required parameter.
 Expressed as a string, determines the type of the value. Can also be an array of strings, allowing multiple types.
 Valid types:
 - "string"
+- "bool"
 - "int"
 - "float"
 - "array"
@@ -52,8 +53,8 @@ Exceptions:
 ### `optional`:
 Expressed as a boolean, determines whether or not this value is required to be included.
 ### `default`:
-Required parameter except when `type` parameter is a blueprint pointer.
-Determines what the value should default to if it is not already properly defined.
+Required parameter except when `type` references a blueprint.
+Determines what the value should default to if it is not already *properly* defined.
 ### `range`:
 Expressed as an array of 2 integers, determines the minimum & maximum size or length of the value. If `null`, then the value can have any size or length.
 ### `enum`:
