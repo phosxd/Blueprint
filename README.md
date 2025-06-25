@@ -97,7 +97,7 @@ Expressed as an array of strings, determines the type of all elements in the arr
 		"type": "string",
 		"range": [4,20],
 		"regex": "[[:alnum:]]+",
-		"default": "Placeholder",
+		"default": "placeholder",
 	},
 	"health": {
 		"type": "int",

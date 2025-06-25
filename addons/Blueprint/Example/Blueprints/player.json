@@ -3,7 +3,7 @@
 		"type": "string",
 		"range": [4,20],
 		"regex": "[[:alnum:]_]+",
-		"default": "Placeholder",
+		"default": "placeholder",
 	},
 	"health": {
 		"type": "int",

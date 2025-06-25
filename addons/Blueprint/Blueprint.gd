@@ -102,14 +102,14 @@ func _init(name:String, data:Dictionary) -> void:
 		for key in regex_patterns:
 			regex_patterns_compiled[key] = RegEx.new()
 			var err = regex_patterns_compiled[key].compile(regex_patterns[key])
-	# If invalid Blueprint, do nothing.
+	# If invalid Blueprint, print error & return.
 	var validation_error:error = _validate(data)
 	if validation_error: 
 		valid = false
 		push_error(error_strings[validation_error])
 		return
-	valid = true
 	# Otherwise, set up Blueprint.
+	valid = true
 	self.data = data
 	BlueprintManager.add_blueprint(name, self)
 
