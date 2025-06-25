@@ -94,21 +94,9 @@ var data
 var valid:bool
 
 
-# `BlueprintMatch` class.
-# -----------------------
-class BlueprintMatch:
-	var matched:Variant
-	var errors:Dictionary[String, Blueprint.error]
 
-
-	func _init(matched:Variant, errors:Dictionary[String, Blueprint.error]):
-		self.matched = matched
-		self.errors = errors
-
-
-
-
-func _init(name:String, data:Dictionary) -> void: ## Initializes the `Blueprint` & registers in the `BlueprintManager`. "data" parameter should be a `Dictionary`.
+## Initializes the `Blueprint` & registers in the `BlueprintManager`. "data" parameter should be a `Dictionary`.
+func _init(name:String, data:Dictionary) -> void:
 	# Compile RegEx patterns, if not already.
 	if regex_patterns_compiled == {}:
 		for key in regex_patterns:
@@ -126,7 +114,8 @@ func _init(name:String, data:Dictionary) -> void: ## Initializes the `Blueprint`
 	BlueprintManager.add_blueprint(name, self)
 
 
-## Checks if the data is a valid Blueprint. Returns Blueprint error code.
+## Checks if the data is a valid Blueprint.
+## Returns Blueprint error code.
 static func _validate(data:Dictionary) -> error:
 	var typeof_data:Variant.Type = typeof(data)
 	if typeof_data not in [TYPE_DICTIONARY]: return error.ERR_BP_DATA_INVALID_TYPE
@@ -220,7 +209,9 @@ static func _validate(data:Dictionary) -> error:
 
 
 
-func match(object:Dictionary) -> BlueprintMatch: ## Matches the `object` to this Blueprint, mismatched values will be fixed. Returns a `BlueprintMatch` with the fixed "object" & an unordered list of matching errors.
+## Matches the `object` to this Blueprint, mismatched values will be fixed.
+## Returns a `BlueprintMatch` with the fixed "object" & an unordered list of matching errors.
+func match(object:Dictionary) -> BlueprintMatch:
 	var result := BlueprintMatch.new(object.duplicate(true), {})
 	# Return if Blueprint is invalid.
 	if not self.valid:
@@ -275,9 +266,8 @@ func match(object:Dictionary) -> BlueprintMatch: ## Matches the `object` to this
 	return result
 
 
-
-
-static func add_format(name:String, regex_pattern:String) -> void: ## Adds the RegEx pattern to the list of available formats for all Blueprints.
+## Adds the RegEx pattern to the list of available formats for all Blueprints.
+static func add_format(name:String, regex_pattern:String) -> void:
 	regex_patterns[name] = regex_pattern
 	var new_regex := RegEx.new()
 	new_regex.compile(regex_pattern)
@@ -471,8 +461,12 @@ static func _handle_blueprint_match(value, parameters:Dictionary) -> BlueprintMa
 	var result := BlueprintMatch.new({}, {'main':error.MATCH_OK})
 	var blueprint_name:String = parameters.type.trim_prefix('>')
 	var blueprint = BlueprintManager.get_blueprint(blueprint_name)
-	if not blueprint: assert(false, 'Cannot match against non-existent Blueprint "%s".' % blueprint_name)
-	var empty_matched:BlueprintMatch = blueprint.match({})
+	# Validate the Blueprint before use.
+	var assert_error:bool = false
+	if not blueprint: assert_error = true
+	if not blueprint.valid: assert_error = true
+	if assert_error:
+		assert(false, 'Cannot match against non-existent Blueprint "%s".' % blueprint_name)
 	# Validate value type.
 	if typeof(value) != TYPE_DICTIONARY:
 		result.matched = parameters.default
