@@ -1,9 +1,7 @@
-
-
-
-
 A Godot-4.4 plugin that validates & corrects dictionary data.
 It allows you to define expected data structures (Blueprints) & compare dictionaries against them.
+
+**Version:** 2.0.0-dev
 
 # Table of Contents:
 - [Installation](#how-to-install)
@@ -99,18 +97,18 @@ Expressed as an array of strings, determines the type of all elements in the arr
 		"type": "string",
 		"range": [4,20],
 		"regex": "[[:alnum:]]+",
-		"default": "Placeholder"
+		"default": "Placeholder",
 	},
 	"health": {
 		"type": "int",
 		"range": [0,100],
-		"default": 100
+		"default": 100,
 	},
 	"inventory": {
 		"type": "array",
 		"range": null,
 		"element_types": [">item"],
-		"default": []
+		"default": [],
 	},
 	"date_joined": {
 		"type": "string",
@@ -131,7 +129,7 @@ In this example, the blueprint specifies:
 	"id": {
 		"type": "string",
 		"enum": ["helmet", "sword", "cookie", "placeholder"],
-		"default": "placeholder"
+		"default": "placeholder",
 	},
 	"metadata": {
 		"type": "dict",
@@ -161,3 +159,11 @@ In this example, the blueprint specifies:
 - `remove_blueprint(name:String) -> void`: Removes the `Blueprint` by it's registered name. Does nothing if it doesn't exist.
 - `get_blueprint(name:String) -> Blueprint`: Returns the `Blueprint` by it's registered name. Returns `null` if it doesn't exist.
 - `add_blueprint_from_file(name:String, filepath:String) -> bool`: Registers a `Blueprint` from a JSON file. Returns whether or not the `Blueprint` is valid.
+
+
+# TO-DO:
+## `step` parameter:
+Much like the `range` parameter, this parameter would restrict the value's size/length, however it would enforce it by incremenets of a number. For example, if `step` is `10` then the value must be (if an `int`/`float`) `10`, `20`, `30`, `40`, `...`.
+
+## `case_sensitive` parameter for strings:
+Expressed as a bool, this parameter would define whether or not the value's letter casing matters.
