@@ -5,8 +5,8 @@ const TYPE_BLUEPRINT_POINTER:int = TYPE_MAX+1
 
 ## Blueprint error codes.
 enum error {
-	OK,
-	FAILED,
+	BP_OK,
+	BP_FAILED,
 	ERR_BP_PARAMSET_NOT_DICTIONARY,
 	ERR_BP_PARAMSET_MISSING_TYPE,
 	ERR_BP_PARAMSET_INVALID_TYPE_PARAM,
@@ -23,12 +23,22 @@ enum error {
 	ERR_BP_PARAMSET_UNEXPECTED_REGEX_PARAM,
 	ERR_BP_PARAMSET_UNEXPECTED_ELEMENT_TYPES_PARAM,
 	ERR_BP_DATA_INVALID_TYPE,
+	MATCH_OK,
+	MATCH_FAILED,
+	ERR_MATCH_INVALID,
+	ERR_MATCH_FAILED_TYPE,
+	ERR_MATCH_FAILED_ENUM,
+	ERR_MATCH_FAILED_RANGE,
+	ERR_MATCH_FAILED_PREFIX,
+	ERR_MATCH_FAILED_SUFFIX,
+	ERR_MATCH_FAILED_REGEX,
+	ERR_MATCH_FAILED_FORMAT,
 }
 
 ## Blueprint errors as explanatory strings.
 const error_strings:Array[String] = [
-	'OK.',
-	'Unexpected failure.',
+	'Blueprint validated with no errors.',
+	'Blueprint validation failed unexpectedly.',
 	'Blueprint parameter set must be of type `Dictionary`.',
 	'Blueprint parameter set must contain a "type" parameter.',
 	'Blueprint parameter set\'s "type" parameter must be of type `String` & match one of the following values: "string", "bool", "int", "float", "array", "dict", ">{blueprint_name}".',
@@ -45,6 +55,16 @@ const error_strings:Array[String] = [
 	'Blueprint parameter set\'s "regex" parameter is only expected when the parameter set\'s "type" parameter is "string".',
 	'Blueprint parameter set\'s "element_types" parameter is only expected when the parameter set\'s "type" parameter is "array".',
 	'Blueprint data should only be of type `Dictionary`.',
+	'Matched with no errors.',
+	'Match failed unexpectedly.',
+	'Cannot match with an invalid Blueprint.',
+	'Match failed "type": invalid value type.',
+	'Mtach failed "enum": value is not equal to any of the allowed values.',
+	'Match failed "range": value does not fall into the specified range.',
+	'Match Failed "prefix": value does not have specified prefix.',
+	'Match Failed "suffix": value does not have specified suffix.',
+	'Match Failed "regex": value doesn\'t match to the specified RegEx pattern.',
+	'Match Failed "format": value doesn\'t follow the specified format.',
 ]
 
 ## RegEx patterns available for all Blueprints. When adding to or modifiying this, make sure to update `regex_patterns_compiled` accordingly.
@@ -72,6 +92,20 @@ static var regex_patterns_compiled:Dictionary[String,RegEx] = {}
 var data
 ## Whether or not this Blueprint is valid for use.
 var valid:bool
+
+
+# `BlueprintMatch` class.
+# -----------------------
+class BlueprintMatch:
+	var matched:Variant
+	var errors:Dictionary[String, Blueprint.error]
+
+
+	func _init(matched:Variant, errors:Dictionary[String, Blueprint.error]):
+		self.matched = matched
+		self.errors = errors
+
+
 
 
 func _init(name:String, data:Dictionary) -> void: ## Initializes the `Blueprint` & registers in the `BlueprintManager`. "data" parameter should be a `Dictionary`.
@@ -181,18 +215,24 @@ static func _validate(data:Dictionary) -> error:
 			if type_param_literal_type != TYPE_ARRAY: return error.ERR_BP_PARAMSET_UNEXPECTED_ELEMENT_TYPES_PARAM
 			if typeof(element_types_param) != TYPE_ARRAY: return error.ERR_BP_PARAMSET_INVALID_ELEMENT_TYPES_PARAM
 
-	return error.OK
+	return error.BP_OK
 
 
 
 
-func match(object:Dictionary): ## Matches the `object` to this Blueprint, mismatched values will be fixed. Returns fixed `object`. Returns `null` if Blueprint is invalid.
-	if not self.valid: return # Return if Blueprint is invalid.
+func match(object:Dictionary) -> BlueprintMatch: ## Matches the `object` to this Blueprint, mismatched values will be fixed. Returns a `BlueprintMatch` with the fixed "object" & an unordered list of matching errors.
+	var result := BlueprintMatch.new(object.duplicate(true), {})
+	# Return if Blueprint is invalid.
+	if not self.valid:
+		result.errors['_pre_match-1'] = error.ERR_MATCH_INVALID
+		return result
+
+	# Iterate through every key in the Blueprint.
 	for key in self.data:
 		var blueprint_params
 		var object_value
 		blueprint_params = self.data[key]
-		object_value = object.get(key)
+		object_value = result.matched.get(key)
 		# If value missing & is optional, skip.
 		if not object_value && blueprint_params.get('optional') == true:
 			continue
@@ -200,30 +240,39 @@ func match(object:Dictionary): ## Matches the `object` to this Blueprint, mismat
 		if not object_value:
 			if blueprint_params.type:
 				if blueprint_params.type.begins_with('>'):
-					object.set(key, _handle_blueprint_match({}, blueprint_params))
+					result.matched.set(key, _handle_blueprint_match({}, blueprint_params))
 					continue
-			object.set(key, blueprint_params.default)
+			result.matched.set(key, blueprint_params.default)
 			continue
 		# If value does not match enum (if defined), use default.
 		if object_value not in blueprint_params.get('enum',[object_value]):
-			object.set(key, blueprint_params.default)
+			result.matched.set(key, blueprint_params.default)
 			continue
-		# Match.
-		match blueprint_params.type:
-			'string': object.set(key, _handle_string_match(object_value, blueprint_params))
-			'bool': object.set(key, _handle_bool_match(object_value, blueprint_params))
-			'int': object.set(key, _handle_int_match(object_value, blueprint_params))
-			'float': object.set(key, _handle_float_match(object_value, blueprint_params))
-			'array': object.set(key, _handle_array_match(object_value, blueprint_params))
-			'dict': object.set(key, _handle_dict_match(object_value, blueprint_params))
-			null: object.set(key, object_value)
-			_:
-				if blueprint_params.type.begins_with('>'):
-					object.set(key, _handle_blueprint_match(object_value, blueprint_params))
-				else:
-					assert(false, 'Invalid Blueprint parameters type "%s".' % blueprint_params.type)
 
-	return object
+		# Match.
+		var handled:bool = false
+		for item:Array in [
+			['string',_handle_string_match],
+			['bool',_handle_bool_match],
+			['int',_handle_int_match],
+			['float',_handle_float_match],
+			['array',_handle_array_match],
+			['dict',_handle_dict_match],
+		]:
+			if item[0] == blueprint_params.type:
+				var match_result = item[1].call(object_value, blueprint_params)
+				result.errors[key] = match_result.errors['main']
+				result.matched.set(key, match_result.matched)
+			handled = true
+		if not handled:
+			if blueprint_params.type == null:
+				result.matched.set(key, object_value)
+			if blueprint_params.type.begins_with('>'):
+				result.matched.set(key, _handle_blueprint_match(object_value, blueprint_params))
+			else:
+				assert(false, 'Invalid Blueprint parameters type "%s".' % blueprint_params.type)
+
+	return result
 
 
 
@@ -237,79 +286,135 @@ static func add_format(name:String, regex_pattern:String) -> void: ## Adds the R
 
 
 
-static func _handle_string_match(value, parameters:Dictionary):
-	if typeof(value) != TYPE_STRING: return parameters.default # Validate value type.
+static func _handle_string_match(value, parameters:Dictionary) -> BlueprintMatch:
+	var result := BlueprintMatch.new(value, {'main':error.MATCH_OK})
+	# Validate value type.
+	if typeof(value) != TYPE_STRING:
+		result.matched = parameters.default
+		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
+		return result
 	# Validate with string length.
 	var range = parameters.get('range')
 	var value_length:int = value.length()
 	if range:
-		if value_length > range[1] || value_length < range[0]: return parameters.default
+		if value_length > range[1] || value_length < range[0]:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_RANGE
+			return result
 	# Validate with prefix.
 	var prefix = parameters.get('prefix')
 	if prefix:
-		if not value.begins_with(prefix): return parameters.default
+		if not value.begins_with(prefix):
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_PREFIX
+			return result
 	# Validate with suffix.
 	var suffix = parameters.get('suffix')
-	if prefix:
-		if not value.ends_with(prefix): return parameters.default
+	if suffix:
+		if not value.ends_with(prefix):
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_SUFFIX
+			return result
 	# Validate with regex match.
 	var regex_pattern = parameters.get('regex')
 	if regex_pattern:
 		var regex := RegEx.new()
 		regex.compile(regex_pattern, false)
-		var result = regex.search(value)
-		if not result: return parameters.default
+		var regex_result = regex.search(value)
+		if not regex_result:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_REGEX
+			return result
 		var matched:bool = false
-		for string:String in result.strings:
+		for string:String in regex_result.strings:
 			if string == value: matched = true
-		if not matched: return parameters.default
+		if not matched:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_REGEX
+			return result
 	# Validate with format.
 	var format = parameters.get('format')
 	if format:
 		var format_regex = regex_patterns_compiled.get(format)
 		if not format_regex: assert(false, 'Cannot match non-existent format "%s".' % format)
-		var result = format_regex.search(value)
-		if not result: return parameters.default
+		var regex_result = format_regex.search(value)
+		if not regex_result:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_FORMAT
+			return result
 		var matched:bool = false
-		for string:String in result.strings:
+		for string:String in regex_result.strings:
 			if string == value: matched = true
-		if not matched: return parameters.default
+		if not matched:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_FORMAT
+			return result
 	
-	return value
+	return result
 
 
-static func _handle_bool_match(value, parameters:Dictionary):
-	if typeof(value) != TYPE_BOOL: return parameters.default # Validate value type.
-	return value
+static func _handle_bool_match(value, parameters:Dictionary) -> BlueprintMatch:
+	var result := BlueprintMatch.new(value, {'main':error.MATCH_OK})
+	# Validate value type.
+	if typeof(value) != TYPE_BOOL:
+		result.matched = parameters.default
+		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
+	return result
 
 
-static func _handle_int_match(value, parameters:Dictionary):
-	if typeof(value) not in [TYPE_INT, TYPE_FLOAT]: return parameters.default # Validate value type.
-	if round(value) != value: return parameters.default
+static func _handle_int_match(value, parameters:Dictionary) -> BlueprintMatch:
+	var result := BlueprintMatch.new(value, {'main':error.MATCH_OK})
+	# Validate value type.
+	if typeof(value) not in [TYPE_INT, TYPE_FLOAT]:
+		result.matched = parameters.default
+		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
+		return result
+	if round(value) != value:
+		result.matched = parameters.default
+		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
+		return result
 	var range = parameters.get('range')
 	# Validate with min/max.
 	if range:
-		if value > range[1] || value < range[0]: return parameters.default
-	return value
+		if value > range[1] || value < range[0]:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_RANGE
+
+	return result
 
 
-static func _handle_float_match(value, parameters:Dictionary):
-	if typeof(value) not in [TYPE_INT, TYPE_FLOAT]: return parameters.default # Validate value type.
+static func _handle_float_match(value, parameters:Dictionary) -> BlueprintMatch:
+	var result := BlueprintMatch.new(value, {'main':error.MATCH_OK})
+	# Validate value type.
+	if typeof(value) not in [TYPE_INT, TYPE_FLOAT]:
+		result.matched = parameters.default
+		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
+		return result
 	var range = parameters.get('range')
 	# Validate with min/max.
 	if range:
-		if value > range[1] || value < range[0]: return parameters.default
-	return value
+		if value > range[1] || value < range[0]:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_RANGE
+
+	return result
 
 
-static func _handle_array_match(value, parameters:Dictionary):
-	if typeof(value) != TYPE_ARRAY: return parameters.default # Validate value type.
-	var new_value:Array = []
+static func _handle_array_match(value, parameters:Dictionary) -> BlueprintMatch:
+	var result := BlueprintMatch.new([], {'main':error.MATCH_OK})
+	# Validate value type.
+	if typeof(value) != TYPE_ARRAY:
+		result.matched = parameters.default
+		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
+		return result
 	var range = parameters.get('range')
 	var value_size:int = value.size()
 	# Validate with array size.
 	if range:
-		if value_size > range[1] || value_size < range[0]: return parameters.default
+		if value_size > range[1] || value_size < range[0]:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_RANGE
+			return result
 	# Validate with type of each element in array.
 	var element_types = parameters.get('element_types')
 	if element_types:
@@ -333,31 +438,47 @@ static func _handle_array_match(value, parameters:Dictionary):
 					if expected_type.begins_with('>'):
 						if item_type != TYPE_DICTIONARY: create_element = false
 						else:
-							item = _handle_blueprint_match(item, {'type':expected_type, 'default':{}})
+							item = _handle_blueprint_match(item, {'type':expected_type, 'default':{}}).matched
 					# If unexpected type, skip.
 					else: create_element = false
 			# Put item into new array, if valid.
 			if create_element:
-				new_value.append(item)
+				result.matched.append(item)
 			index += 1
-	return new_value
+
+	return result
 
 
-static func _handle_dict_match(value, parameters:Dictionary):
-	if typeof(value) != TYPE_DICTIONARY: return parameters.default # Validate value type.
+static func _handle_dict_match(value, parameters:Dictionary) -> BlueprintMatch:
+	var result := BlueprintMatch.new(value, {'main':error.MATCH_OK})
+	# Validate value type.
+	if typeof(value) != TYPE_DICTIONARY:
+		result.matched = parameters.default
+		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
+		return result
 	var range = parameters.get('range')
 	var value_size:int = value.size()
 	# Validate with dictionary size.
 	if range:
-		if value_size > range[1] || value_size < range[0]: return parameters.default
-	return value
+		if value_size > range[1] || value_size < range[0]:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_RANGE
+
+	return result
 
 
-static func _handle_blueprint_match(value, parameters:Dictionary):
+static func _handle_blueprint_match(value, parameters:Dictionary) -> BlueprintMatch:
+	var result := BlueprintMatch.new({}, {'main':error.MATCH_OK})
 	var blueprint_name:String = parameters.type.trim_prefix('>')
 	var blueprint = BlueprintManager.get_blueprint(blueprint_name)
 	if not blueprint: assert(false, 'Cannot match against non-existent Blueprint "%s".' % blueprint_name)
-	var empty_matched:Dictionary = blueprint.match({})
-	if typeof(value) != TYPE_DICTIONARY: return empty_matched # Validate value type.
-	var matched:Dictionary = blueprint.match(value)
-	return matched
+	var empty_matched:BlueprintMatch = blueprint.match({})
+	# Validate value type.
+	if typeof(value) != TYPE_DICTIONARY:
+		result.matched = parameters.default
+		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
+		return result
+	# Match.
+	result.matched = blueprint.match(value).matched
+
+	return result

@@ -16,9 +16,14 @@ func _ready() -> void:
 	# If the blueprint is not valid, return.
 	if not player_blueprint.valid: return
 	# Match a dictionary against the blueprint.
-	var matched = player_blueprint.match({
+	var match_result = player_blueprint.match({
 		"health": 50,
 		"inventory": [{'id':'cookie'}, {'id':'helmet'}],
 	})
 	# Print the matched dictionary.
-	print(matched)
+	print(match_result.matched)
+
+	# Print all matching errors.
+	for key in match_result.errors:
+		var err_code = match_result.errors[key]
+		print(key+' -- '+Blueprint.error_strings[err_code])

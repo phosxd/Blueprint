@@ -161,9 +161,3 @@ In this example, the blueprint specifies:
 - `remove_blueprint(name:String) -> void`: Removes the `Blueprint` by it's registered name. Does nothing if it doesn't exist.
 - `get_blueprint(name:String) -> Blueprint`: Returns the `Blueprint` by it's registered name. Returns `null` if it doesn't exist.
 - `add_blueprint_from_file(name:String, filepath:String) -> bool`: Registers a `Blueprint` from a JSON file. Returns whether or not the `Blueprint` is valid.
-
-
-
-# TO-DO:
-## Match errors:
-For `Blueprint.match`, add an option to print the reason the match failed & defaulted to the parameter set default.
