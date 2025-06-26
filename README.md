@@ -54,7 +54,9 @@ Expressed as a boolean, determines whether or not this value is required to be i
 Required parameter except when `type` references a blueprint.
 Determines what the value should default to if it is not already *properly* defined.
 ### `range`:
-Expressed as an array of 2 integers, determines the minimum & maximum size or length of the value. If `null`, then the value can have any size or length.
+Expressed as an array of 2 integers, determines the minimum & maximum size/length of the value. If `null` then the value can have any size or length.
+### `step`:
+Expressed as an integer or float, determines the step size which value size/length should be a multiple of. Should never be `0`. If `null` then the value does not need to be a multiple of the step.
 ### `enum`:
 Expressed as an array, determines the expected values.
 
@@ -159,11 +161,3 @@ In this example, the blueprint specifies:
 - `remove_blueprint(name:String) -> void`: Removes the `Blueprint` by it's registered name. Does nothing if it doesn't exist.
 - `get_blueprint(name:String) -> Blueprint`: Returns the `Blueprint` by it's registered name. Returns `null` if it doesn't exist.
 - `add_blueprint_from_file(name:String, filepath:String) -> bool`: Registers a `Blueprint` from a JSON file. Returns whether or not the `Blueprint` is valid.
-
-
-# TO-DO:
-## `step` parameter:
-Much like the `range` parameter, this parameter would restrict the value's size/length, however it would enforce it by incremenets of a number. For example, if `step` is `10` then the value must be (if an `int`/`float`) `10`, `20`, `30`, `40`, `...`.
-
-## `case_sensitive` parameter for strings:
-Expressed as a bool, this parameter would define whether or not the value's letter casing matters.

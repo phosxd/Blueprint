@@ -13,6 +13,7 @@ enum error {
 	ERR_BP_PARAMSET_INVALID_OPTIONAL_PARAM,
 	ERR_BP_PARAMSET_INVALID_DEFAULT_PARAM,
 	ERR_BP_PARAMSET_INVALID_RANGE_PARAM,
+	ERR_BP_PARAMSET_INVALID_STEP_PARAM,
 	ERR_BP_PARAMSET_INVALID_ENUM_PARAM,
 	ERR_BP_PARAMSET_INVALID_PREFIX_PARAM,
 	ERR_BP_PARAMSET_INVALID_SUFFIX_PARAM,
@@ -29,6 +30,7 @@ enum error {
 	ERR_MATCH_FAILED_TYPE,
 	ERR_MATCH_FAILED_ENUM,
 	ERR_MATCH_FAILED_RANGE,
+	ERR_MATCH_FAILED_STEP,
 	ERR_MATCH_FAILED_PREFIX,
 	ERR_MATCH_FAILED_SUFFIX,
 	ERR_MATCH_FAILED_REGEX,
@@ -45,6 +47,7 @@ const error_strings:Array[String] = [
 	'Blueprint parameter set\'s "optional" parameter must be of type `bool`.',
 	'Blueprint parameter set\'s "default" parameter value type must match the `type` parameter & is always required except when `type` is not a blueprint pointer.',
 	'Blueprint parameter set\'s "range" parameter must be of type `Array` & have 2 elements of type `int`, or `float` if "type" parameter is "float".',
+	'Blueprint parameter set\'s "step" parameter must be of type `int` or `float`.',
 	'Blueprint parameter set\'s "enum" parameter must be of type `Array` & have elements of value type that matches `type` parameter.',
 	'Blueprint parameter set\'s "prefix" parameter must be of type `String`.',
 	'Blueprint parameter set\'s "suffix" parameter must be of type `String`.',
@@ -61,6 +64,7 @@ const error_strings:Array[String] = [
 	'Match failed "type": invalid value type.',
 	'Mtach failed "enum": value is not equal to any of the allowed values.',
 	'Match failed "range": value does not fall into the specified range.',
+	'Match failed "step": value is not a multiple of the sepcified step.',
 	'Match Failed "prefix": value does not have specified prefix.',
 	'Match Failed "suffix": value does not have specified suffix.',
 	'Match Failed "regex": value doesn\'t match to the specified RegEx pattern.',
@@ -173,6 +177,12 @@ static func _validate(data:Dictionary) -> error:
 				count += 1
 			if count != 2: return error.ERR_BP_PARAMSET_INVALID_RANGE_PARAM
 
+		# Validate "step" parameter.
+		var step_param = value.get('step')
+		if step_param != null:
+			if typeof(step_param) not in [TYPE_INT, TYPE_FLOAT]: return error.ERR_BP_PARAMSET_INVALID_STEP_PARAM
+			if step_param == 0: return error.ERR_BP_PARAMSET_INVALID_STEP_PARAM
+
 		# Validate "enum" parameter.
 		var enum_param = value.get('enum')
 		if enum_param != null:
@@ -283,7 +293,7 @@ static func _handle_string_match(value, parameters:Dictionary) -> BlueprintMatch
 		result.matched = parameters.default
 		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
 		return result
-	# Validate with string length.
+	# Validate string length.
 	var range = parameters.get('range')
 	var value_length:int = value.length()
 	if range:
@@ -291,21 +301,28 @@ static func _handle_string_match(value, parameters:Dictionary) -> BlueprintMatch
 			result.matched = parameters.default
 			result.errors['main'] = error.ERR_MATCH_FAILED_RANGE
 			return result
-	# Validate with prefix.
+	# Validate stepped string length.
+	var step = parameters.get('step')
+	if step:
+		if value_length%step != 0:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_STEP
+			return result
+	# Validate prefix.
 	var prefix = parameters.get('prefix')
 	if prefix:
 		if not value.begins_with(prefix):
 			result.matched = parameters.default
 			result.errors['main'] = error.ERR_MATCH_FAILED_PREFIX
 			return result
-	# Validate with suffix.
+	# Validate suffix.
 	var suffix = parameters.get('suffix')
 	if suffix:
 		if not value.ends_with(prefix):
 			result.matched = parameters.default
 			result.errors['main'] = error.ERR_MATCH_FAILED_SUFFIX
 			return result
-	# Validate with regex match.
+	# Validate regex match.
 	var regex_pattern = parameters.get('regex')
 	if regex_pattern:
 		var regex := RegEx.new()
@@ -322,7 +339,7 @@ static func _handle_string_match(value, parameters:Dictionary) -> BlueprintMatch
 			result.matched = parameters.default
 			result.errors['main'] = error.ERR_MATCH_FAILED_REGEX
 			return result
-	# Validate with format.
+	# Validate format.
 	var format = parameters.get('format')
 	if format:
 		var format_regex = regex_patterns_compiled.get(format)
@@ -363,12 +380,19 @@ static func _handle_int_match(value, parameters:Dictionary) -> BlueprintMatch:
 		result.matched = parameters.default
 		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
 		return result
+	# Validate min/max value.
 	var range = parameters.get('range')
-	# Validate with min/max.
 	if range:
 		if value > range[1] || value < range[0]:
 			result.matched = parameters.default
 			result.errors['main'] = error.ERR_MATCH_FAILED_RANGE
+	# Validate stepped value.
+	var step = parameters.get('step')
+	if step:
+		if fmod(value,step) != 0:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_STEP
+			return result
 
 	return result
 
@@ -381,11 +405,18 @@ static func _handle_float_match(value, parameters:Dictionary) -> BlueprintMatch:
 		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
 		return result
 	var range = parameters.get('range')
-	# Validate with min/max.
+	# Validate min/max value.
 	if range:
 		if value > range[1] || value < range[0]:
 			result.matched = parameters.default
 			result.errors['main'] = error.ERR_MATCH_FAILED_RANGE
+	# Validate stepped value.
+	var step = parameters.get('step')
+	if step:
+		if fmod(value,step) != 0:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_STEP
+			return result
 
 	return result
 
@@ -397,15 +428,22 @@ static func _handle_array_match(value, parameters:Dictionary) -> BlueprintMatch:
 		result.matched = parameters.default
 		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
 		return result
+	# Validate array size.
 	var range = parameters.get('range')
 	var value_size:int = value.size()
-	# Validate with array size.
 	if range:
 		if value_size > range[1] || value_size < range[0]:
 			result.matched = parameters.default
 			result.errors['main'] = error.ERR_MATCH_FAILED_RANGE
 			return result
-	# Validate with type of each element in array.
+	# Validate stepped array size.
+	var step = parameters.get('step')
+	if step:
+		if fmod(value_size,step) != 0:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_STEP
+			return result
+	# Validate type of each element in array.
 	var element_types = parameters.get('element_types')
 	if element_types:
 		var element_types_size:int = element_types.size()
@@ -446,13 +484,20 @@ static func _handle_dict_match(value, parameters:Dictionary) -> BlueprintMatch:
 		result.matched = parameters.default
 		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
 		return result
+	# Validate dictionary size.
 	var range = parameters.get('range')
 	var value_size:int = value.size()
-	# Validate with dictionary size.
 	if range:
 		if value_size > range[1] || value_size < range[0]:
 			result.matched = parameters.default
 			result.errors['main'] = error.ERR_MATCH_FAILED_RANGE
+	# Validate stepped dictionary size.
+	var step = parameters.get('step')
+	if step:
+		if fmod(value_size,step) != 0:
+			result.matched = parameters.default
+			result.errors['main'] = error.ERR_MATCH_FAILED_STEP
+			return result
 
 	return result
 
