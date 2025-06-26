@@ -1,4 +1,5 @@
-Godot-4.4 plugin that validates & corrects dictionary data.
+
+A Godot-4.4 plugin that validates & corrects dictionary data.
 It allows you to define expected data structures (Blueprints) & compare dictionaries against them.
 
 **Version:** 2.0.0-dev
@@ -156,7 +157,14 @@ In this example, the blueprint specifies:
 - `id` should be a string that matches one of the values defined in the `enum` parameter.
 - `metadata` should be a dictionary containing anything, OR should not exist at all.
 
-# Interfaces:
+</details>
+
+------------
+
+<details><summary><b>Interfaces</b></summary>
+
+------------
+
 ## `Blueprint`:
 ### Properties:
 - `data:Dictionary`: Blueprint data. If modified (which is not recommended), `_validate` needs to be called immediately after.
