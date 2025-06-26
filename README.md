@@ -34,13 +34,13 @@ Alternatively, you can download from the "main" branch which may include new fea
 
 ------------
 
-## Making a `Blueprint`:
+# Making a `Blueprint`:
 Generally you should make a blueprint by writing it in a `.json` file. The JSON file can be read & registered during run-time with the `add_blueprint_from_file` method from the `BlueprintManager` class.
 
 A blueprint consists of key/value pairs where the value is a dictionary of parameters (aka "parameter set") that determine what is expected of the value being matched to it.
 
-## Base parameters:
-### `type`:
+# Base parameters:
+## `type`:
 Required parameter.
 Expressed as a string, determines the type of the value.
 Parameters that are not applicable paired with the specified type are simply ignored.
@@ -59,24 +59,24 @@ Exceptions:
 This does NOT reference Variant Types (E.g. `Vector2`, `Color`, `Callable`, or anything else defined in `Variant.Type`).
 This does NOT reference custom classes, only the base Godot classes in `ClassDB.get_class_list()`.
 `default` or `enum` parameters paired with a type referencing a base class would need to be defined during run-time as you cannot construct class objects through JSON.
-### `optional`:
+## `optional`:
 Expressed as a boolean, determines whether or not this value is required to be included.
-### `default`:
+## `default`:
 Required parameter except when `type` references a blueprint.
 Determines what the value should default to if it is not already *properly* defined.
-### `range`:
+## `range`:
 Expressed as an array of 2 integers, determines the minimum & maximum size/length of the value. If `null` then the value can have any size or length.
-### `step`:
+## `step`:
 Expressed as an integer or float, determines the step size which value size/length should be a multiple of. Should never be `0`. If `null` then the value does not need to be a multiple of the step.
-### `enum`:
+## `enum`:
 Expressed as an array, determines the expected values.
 
-## String parameters:
-### `prefix`:
+# String parameters:
+## `prefix`:
 Expressed as a string, determines the prefix the value must have.
-### `suffix`:
+## `suffix`:
 Expressed as a string, determines the suffix the value must have.
-### `format`:
+## `format`:
 Expressed as a string, determines the format the value must follow. Custom formats can be added to Blueprints, see [add_format](#methods).
 Valid formats:
 - "digits"
@@ -94,23 +94,23 @@ Valid formats:
 - "time_24_hour"
 - "email"
 - "url"
-### `regex`:
+## `regex`:
 Expressed as a string, determines the RegEx pattern the value must follow. (Advanced).
 For information on what RegEx is & how it works, refer to the [Regular Expressions Wikipedia page](https://en.wikipedia.org/wiki/Regular_expression).
 
-## Array parameters:
-### `element_types`:
+# Array parameters:
+## `element_types`:
 Expressed as an array of strings, determines the type of all elements in the array.
 
 </details>
 
 ------------
 
-<details><summary><b>Blueprint examples</b></summary>
+<details><summary><b>JSON examples</b></summary>
 
 ------------
 
-## Player:
+# Player:
 ```json
 {
 	"name": {
@@ -143,7 +143,7 @@ In this example, the blueprint specifies:
 - `inventory` should be an array with unlimited size, and that contains dictionaries matching the item blueprint.
 - `date_joined` should be a string that follows the YYYY/MM/DD date format (E.g. "2008/12/5").
 
-## Item:
+# Item:
 ```json
 {
 	"id": {
@@ -166,22 +166,65 @@ In this example, the blueprint specifies:
 
 ------------
 
+<details><summary><b>Code examples</b></summary>
+
+------------
+
+# Creating a `Blueprint`:
+```gdscript
+var example_blueprint := Blueprint.new('example', {
+	'example': {
+		'type': 'string',
+		'default': 'some string',
+	},
+})
+```
+In this example, we create a new Blueprint with the name "example" and with an example blueprint dictionary.
+This `Blueprint` is now accesible with `BlueprintManager.get_blueprint` if the reference to the variable is lost.
+
+# Getting a `Blueprint`:
+```gdscript
+var example_blueprint = BlueprintManager.get_blueprint('example')
+if example_blueprint == null: return
+if example_blueprint.valid == false: return
+```
+In this example we retrieve an already created `Blueprint` with the name "example" from the `BlueprintManager`.
+If no `Blueprint` by the name "example" is found then we do not use it.
+If the `Blueprint` IS found but it is invalid, we should also not use it.
+
+# Generating new dictionary from a `Blueprint`:
+```gdscript
+var match_result:BlueprintMatch = example_blueprint.match({})
+var new_dictionary:Dictionary = match_result.matched
+```
+In this example we match an empty dictionary against the example `Blueprint` which fills it with the `Blueprint`s default values.
+We then access the fixed dictionary from the `BlueprintMatch` returned from the match.
+
+</details>
+
+------------
+
 <details><summary><b>Interfaces</b></summary>
 
 ------------
 
-## `Blueprint`:
-### Properties:
+# `Blueprint`:
+## Properties:
 - `data:Dictionary`: Blueprint data. If modified (which is not recommended), `_validate` needs to be called immediately after.
-### Methods:
+## Methods:
 - `_init(name:String, data:Dictionary) -> void`: Initializes, then registers in the `BlueprintManager`.
 - `match(data:Dictionary) -> BlueprintMatch`: Matches the `object` to this Blueprint, mismatched values will be fixed. Returns a `BlueprintMatch` with the fixed "object" & an unordered list of matching errors.
 - `add_format(name:String, regex_pattern:String) -> void`: Adds the RegEx pattern to the list of available formats for all Blueprints.
 
-## `BlueprintManager`:
-### Properties:
+# `BlueprintMatch`:
+## Properties:
+- `matched:Variant`: The variable after matching.
+- `errors:Dictionary[String, Blueprint.error]`: All matching errors, as Blueprint error codes.
+
+# `BlueprintManager`:
+## Properties:
 - `registered_blueprints:Dictionary[String,Blueprint]`: All currently registered `Blueprint`s.
-### Methods:
+## Methods:
 - `add_blueprint(name:String, blueprint:Blueprint) -> bool`: Registers the `Blueprint`. Returns true if successfully added the `Blueprint`. Automatically called when a `Blueprint` is created.
 - `remove_blueprint(name:String) -> void`: Removes the `Blueprint` by it's registered name. Does nothing if it doesn't exist.
 - `get_blueprint(name:String) -> Blueprint`: Returns the `Blueprint` by it's registered name. Returns `null` if it doesn't exist.
