@@ -42,7 +42,8 @@ A blueprint consists of key/value pairs where the value is a dictionary of param
 ## Base parameters:
 ### `type`:
 Required parameter.
-Expressed as a string, determines the type of the value. Can also be an array of strings, allowing multiple types.
+Expressed as a string, determines the type of the value.
+Parameters that are not applicable paired with the specified type are simply ignored.
 Valid types:
 - "string"
 - "bool"
@@ -54,6 +55,10 @@ Valid types:
 Exceptions:
 - If `null`, the value can be of any type.
 - If begins with `>`, references a blueprint.
+- If begins with `/`, references a base class.
+This does NOT reference Variant Types (E.g. `Vector2`, `Color`, `Callable`, or anything else defined in `Variant.Type`).
+This does NOT reference custom classes, only the base Godot classes in `ClassDB.get_class_list()`.
+`default` or `enum` parameters paired with a type referencing a base class would need to be defined during run-time as you cannot construct class objects through JSON.
 ### `optional`:
 Expressed as a boolean, determines whether or not this value is required to be included.
 ### `default`:
@@ -170,7 +175,7 @@ In this example, the blueprint specifies:
 - `data:Dictionary`: Blueprint data. If modified (which is not recommended), `_validate` needs to be called immediately after.
 ### Methods:
 - `_init(name:String, data:Dictionary) -> void`: Initializes, then registers in the `BlueprintManager`.
-- `match(data:Dictionary)`: Matches the `object` to this Blueprint, mismatched values will be fixed. Returns fixed `object`.
+- `match(data:Dictionary) -> BlueprintMatch`: Matches the `object` to this Blueprint, mismatched values will be fixed. Returns a `BlueprintMatch` with the fixed "object" & an unordered list of matching errors.
 - `add_format(name:String, regex_pattern:String) -> void`: Adds the RegEx pattern to the list of available formats for all Blueprints.
 
 ## `BlueprintManager`:

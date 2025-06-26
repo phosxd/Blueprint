@@ -2,6 +2,7 @@ class_name Blueprint
 ## Class for holding a dictionary blueprint.
 
 const TYPE_BLUEPRINT_POINTER:int = TYPE_MAX+1
+const TYPE_CLASS_POINTER:int = TYPE_MAX+2
 
 ## Blueprint error codes.
 enum error {
@@ -43,7 +44,7 @@ const error_strings:Array[String] = [
 	'Blueprint validation failed unexpectedly.',
 	'Blueprint parameter set must be of type `Dictionary`.',
 	'Blueprint parameter set must contain a "type" parameter.',
-	'Blueprint parameter set\'s "type" parameter must be of type `String` & match one of the following values: "string", "bool", "int", "float", "array", "dict", ">{blueprint_name}".',
+	'Blueprint parameter set\'s "type" parameter must be of type `String` & match one of the following values: "string", "bool", "int", "float", "array", "dict", ">{blueprint_name}", "/{class_name}".',
 	'Blueprint parameter set\'s "optional" parameter must be of type `bool`.',
 	'Blueprint parameter set\'s "default" parameter value type must match the `type` parameter & is always required except when `type` is not a blueprint pointer.',
 	'Blueprint parameter set\'s "range" parameter must be of type `Array` & have 2 elements of type `int`, or `float` if "type" parameter is "float".',
@@ -144,8 +145,13 @@ static func _validate(data:Dictionary) -> error:
 				'array': type_param_literal_type = TYPE_ARRAY
 				'dict': type_param_literal_type = TYPE_DICTIONARY
 				_:
-					if not type_param.begins_with('>'): return error.ERR_BP_PARAMSET_INVALID_TYPE_PARAM
-					type_param_literal_type = TYPE_BLUEPRINT_POINTER
+					if type_param.begins_with('/'):
+						if not ClassDB.class_exists(type_param.trim_prefix('/')): return error.ERR_BP_PARAMSET_INVALID_TYPE_PARAM
+						type_param_literal_type = TYPE_CLASS_POINTER
+					elif type_param.begins_with('>'):
+						type_param_literal_type = TYPE_BLUEPRINT_POINTER
+					else:
+						return error.ERR_BP_PARAMSET_INVALID_TYPE_PARAM
 
 		# Validate "optional" parameter.
 		var optional_param = value.get('optional', false)
@@ -264,12 +270,18 @@ func match(object:Dictionary) -> BlueprintMatch:
 				var match_result = item[1].call(object_value, blueprint_params)
 				result.errors[key] = match_result.errors['main']
 				result.matched.set(key, match_result.matched)
-			handled = true
+				handled = true
 		if not handled:
 			if blueprint_params.type == null:
 				result.matched.set(key, object_value)
 			if blueprint_params.type.begins_with('>'):
-				result.matched.set(key, _handle_blueprint_match(object_value, blueprint_params))
+				var match_result = _handle_blueprint_match(object_value, blueprint_params)
+				result.errors[key] = match_result.errors['main']
+				result.matched.set(key, match_result.matched)
+			elif blueprint_params.type.begins_with('/'):
+				var match_result = _handle_class_match(object_value, blueprint_params)
+				result.errors[key] = match_result.errors['main']
+				result.matched.set(key, match_result.matched)
 			else:
 				assert(false, 'Invalid Blueprint parameters type "%s".' % blueprint_params.type)
 
@@ -519,5 +531,20 @@ static func _handle_blueprint_match(value, parameters:Dictionary) -> BlueprintMa
 		return result
 	# Match.
 	result.matched = blueprint.match(value).matched
+
+	return result
+
+
+static func _handle_class_match(value, parameters:Dictionary) -> BlueprintMatch:
+	var result := BlueprintMatch.new(value, {'main':error.MATCH_OK})
+	# Validate value type.
+	if typeof(value) != TYPE_OBJECT:
+		result.matched = parameters.default
+		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
+		return result
+	if value.get_class() != parameters.type.trim_prefix('/'):
+		result.matched = parameters.default
+		result.errors['main'] = error.ERR_MATCH_FAILED_TYPE
+		return result
 
 	return result
