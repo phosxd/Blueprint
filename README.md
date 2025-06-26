@@ -1,16 +1,14 @@
-A Godot-4.4 plugin that validates & corrects dictionary data.
+Godot-4.4 plugin that validates & corrects dictionary data.
 It allows you to define expected data structures (Blueprints) & compare dictionaries against them.
 
 **Version:** 2.0.0-dev
 
-# Table of Contents:
-- [Installation](#how-to-install)
-- [Usage](#how-to-use)
-- [Examples](#blueprint-examples)
-- [Interfaces](#interfaces)
-- [To-do](#to-do)
+------------
 
-# How to install:
+<details><summary><b>How to install</b></summary>
+
+------------
+
 If everything installed correctly, both the `Blueprint` & `BlueprintManager` classes should be globally available in your GDScripts.
 
 ### From Asset Library:
@@ -27,7 +25,14 @@ If everything installed correctly, both the `Blueprint` & `BlueprintManager` cla
 
 Alternatively, you can download from the "main" branch which may include new features but can also contain unfinished code or unexpected issues. Bug reports for unreleased versions are not accepted.
 
-# How to use:
+</details>
+
+------------
+
+<details><summary><b>How to use</b></summary>
+
+------------
+
 ## Making a `Blueprint`:
 Generally you should make a blueprint by writing it in a `.json` file. The JSON file can be read & registered during run-time with the `add_blueprint_from_file` method from the `BlueprintManager` class.
 
@@ -91,7 +96,14 @@ For information on what RegEx is & how it works, refer to the [Regular Expressio
 ### `element_types`:
 Expressed as an array of strings, determines the type of all elements in the array.
 
-# `Blueprint` examples:
+</details>
+
+------------
+
+<details><summary><b>Blueprint examples</b></summary>
+
+------------
+
 ## Player:
 ```json
 {
@@ -161,3 +173,7 @@ In this example, the blueprint specifies:
 - `remove_blueprint(name:String) -> void`: Removes the `Blueprint` by it's registered name. Does nothing if it doesn't exist.
 - `get_blueprint(name:String) -> Blueprint`: Returns the `Blueprint` by it's registered name. Returns `null` if it doesn't exist.
 - `add_blueprint_from_file(name:String, filepath:String) -> bool`: Registers a `Blueprint` from a JSON file. Returns whether or not the `Blueprint` is valid.
+
+</details>
+
+------------
