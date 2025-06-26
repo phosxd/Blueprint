@@ -2,7 +2,7 @@
 A Godot-4.4 plugin that validates & corrects dictionary data.
 It allows you to define expected data structures (Blueprints) & compare dictionaries against them.
 
-**Version:** 2.0.0-dev
+**Version:** 2.0.0
 
 ------------
 
@@ -10,7 +10,7 @@ It allows you to define expected data structures (Blueprints) & compare dictiona
 
 ------------
 
-If everything installed correctly, both the `Blueprint` & `BlueprintManager` classes should be globally available in your GDScripts.
+If everything installed correctly, both the `Blueprint`, `BlueprintMatch`, & `BlueprintManager` classes should be globally available in your GDScripts.
 
 ### From Asset Library:
  1. In your Godot project, navigate to the "Asset Library" tab & search for ["Blueprint - Data Validation" or just "Blueprint"](https://godotengine.org/asset-library/asset/4098).
